@@ -13,6 +13,7 @@ import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
 import { Route as ShellLeaksRouteImport } from './routes/_shell/leaks'
+import { Route as ShellTransactionsRouteImport } from './routes/_shell/transactions'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -33,15 +34,22 @@ const ShellLeaksRoute = ShellLeaksRouteImport.update({
   path: '/leaks',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellTransactionsRoute = ShellTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => ShellRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/leaks': typeof ShellLeaksRoute
+  '/transactions': typeof ShellTransactionsRoute
 }
 export interface FileRoutesByTo {
   '/ai-insights': typeof ShellAiInsightsRoute
   '/leaks': typeof ShellLeaksRoute
+  '/transactions': typeof ShellTransactionsRoute
   '/': typeof ShellIndexRoute
 }
 export interface FileRoutesById {
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   '/_shell': typeof ShellRouteWithChildren
   '/_shell/ai-insights': typeof ShellAiInsightsRoute
   '/_shell/leaks': typeof ShellLeaksRoute
+  '/_shell/transactions': typeof ShellTransactionsRoute
   '/_shell/': typeof ShellIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai-insights' | '/leaks'
+  fullPaths: '/' | '/ai-insights' | '/leaks' | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/ai-insights' | '/leaks' | '/'
+  to: '/ai-insights' | '/leaks' | '/transactions' | '/'
   id:
     | '__root__'
     | '/_shell'
     | '/_shell/ai-insights'
     | '/_shell/leaks'
+    | '/_shell/transactions'
     | '/_shell/'
   fileRoutesById: FileRoutesById
 }
@@ -98,18 +108,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellLeaksRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/transactions': {
+      id: '/_shell/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof ShellTransactionsRouteImport
+      parentRoute: typeof ShellRoute
+    }
   }
 }
 
 interface ShellRouteChildren {
   ShellAiInsightsRoute: typeof ShellAiInsightsRoute
   ShellLeaksRoute: typeof ShellLeaksRoute
+  ShellTransactionsRoute: typeof ShellTransactionsRoute
   ShellIndexRoute: typeof ShellIndexRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
   ShellAiInsightsRoute: ShellAiInsightsRoute,
   ShellLeaksRoute: ShellLeaksRoute,
+  ShellTransactionsRoute: ShellTransactionsRoute,
   ShellIndexRoute: ShellIndexRoute,
 }
 
