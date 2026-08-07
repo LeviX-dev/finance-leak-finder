@@ -12,12 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
+import { Route as ShellAnalyticsRouteImport } from './routes/_shell/analytics'
 import { Route as ShellContractsRouteImport } from './routes/_shell/contracts'
+import { Route as ShellIntegrationsRouteImport } from './routes/_shell/integrations'
 import { Route as ShellInvoicesRouteImport } from './routes/_shell/invoices'
 import { Route as ShellLeaksRouteImport } from './routes/_shell/leaks'
+import { Route as ShellNotificationsRouteImport } from './routes/_shell/notifications'
 import { Route as ShellPaymentsRouteImport } from './routes/_shell/payments'
+import { Route as ShellProfileRouteImport } from './routes/_shell/profile'
+import { Route as ShellRecoveryRouteImport } from './routes/_shell/recovery'
 import { Route as ShellReportsRouteImport } from './routes/_shell/reports'
+import { Route as ShellSecurityRouteImport } from './routes/_shell/security'
+import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
 import { Route as ShellTransactionsRouteImport } from './routes/_shell/transactions'
+import { Route as ShellUsersRouteImport } from './routes/_shell/users'
 import { Route as ShellVendorsRouteImport } from './routes/_shell/vendors'
 
 const ShellRoute = ShellRouteImport.update({
@@ -34,9 +42,19 @@ const ShellAiInsightsRoute = ShellAiInsightsRouteImport.update({
   path: '/ai-insights',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellAnalyticsRoute = ShellAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellContractsRoute = ShellContractsRouteImport.update({
   id: '/contracts',
   path: '/contracts',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellIntegrationsRoute = ShellIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellInvoicesRoute = ShellInvoicesRouteImport.update({
@@ -49,9 +67,24 @@ const ShellLeaksRoute = ShellLeaksRouteImport.update({
   path: '/leaks',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellNotificationsRoute = ShellNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellPaymentsRoute = ShellPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellProfileRoute = ShellProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellRecoveryRoute = ShellRecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellReportsRoute = ShellReportsRouteImport.update({
@@ -59,9 +92,24 @@ const ShellReportsRoute = ShellReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellSecurityRoute = ShellSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellSettingsRoute = ShellSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellTransactionsRoute = ShellTransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellUsersRoute = ShellUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellVendorsRoute = ShellVendorsRouteImport.update({
@@ -73,22 +121,38 @@ const ShellVendorsRoute = ShellVendorsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
   '/ai-insights': typeof ShellAiInsightsRoute
+  '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
+  '/integrations': typeof ShellIntegrationsRoute
   '/invoices': typeof ShellInvoicesRoute
   '/leaks': typeof ShellLeaksRoute
+  '/notifications': typeof ShellNotificationsRoute
   '/payments': typeof ShellPaymentsRoute
+  '/profile': typeof ShellProfileRoute
+  '/recovery': typeof ShellRecoveryRoute
   '/reports': typeof ShellReportsRoute
+  '/security': typeof ShellSecurityRoute
+  '/settings': typeof ShellSettingsRoute
   '/transactions': typeof ShellTransactionsRoute
+  '/users': typeof ShellUsersRoute
   '/vendors': typeof ShellVendorsRoute
 }
 export interface FileRoutesByTo {
   '/ai-insights': typeof ShellAiInsightsRoute
+  '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
+  '/integrations': typeof ShellIntegrationsRoute
   '/invoices': typeof ShellInvoicesRoute
   '/leaks': typeof ShellLeaksRoute
+  '/notifications': typeof ShellNotificationsRoute
   '/payments': typeof ShellPaymentsRoute
+  '/profile': typeof ShellProfileRoute
+  '/recovery': typeof ShellRecoveryRoute
   '/reports': typeof ShellReportsRoute
+  '/security': typeof ShellSecurityRoute
+  '/settings': typeof ShellSettingsRoute
   '/transactions': typeof ShellTransactionsRoute
+  '/users': typeof ShellUsersRoute
   '/vendors': typeof ShellVendorsRoute
   '/': typeof ShellIndexRoute
 }
@@ -96,12 +160,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
   '/_shell/ai-insights': typeof ShellAiInsightsRoute
+  '/_shell/analytics': typeof ShellAnalyticsRoute
   '/_shell/contracts': typeof ShellContractsRoute
+  '/_shell/integrations': typeof ShellIntegrationsRoute
   '/_shell/invoices': typeof ShellInvoicesRoute
   '/_shell/leaks': typeof ShellLeaksRoute
+  '/_shell/notifications': typeof ShellNotificationsRoute
   '/_shell/payments': typeof ShellPaymentsRoute
+  '/_shell/profile': typeof ShellProfileRoute
+  '/_shell/recovery': typeof ShellRecoveryRoute
   '/_shell/reports': typeof ShellReportsRoute
+  '/_shell/security': typeof ShellSecurityRoute
+  '/_shell/settings': typeof ShellSettingsRoute
   '/_shell/transactions': typeof ShellTransactionsRoute
+  '/_shell/users': typeof ShellUsersRoute
   '/_shell/vendors': typeof ShellVendorsRoute
   '/_shell/': typeof ShellIndexRoute
 }
@@ -110,34 +182,58 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ai-insights'
+    | '/analytics'
     | '/contracts'
+    | '/integrations'
     | '/invoices'
     | '/leaks'
+    | '/notifications'
     | '/payments'
+    | '/profile'
+    | '/recovery'
     | '/reports'
+    | '/security'
+    | '/settings'
     | '/transactions'
+    | '/users'
     | '/vendors'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/ai-insights'
+    | '/analytics'
     | '/contracts'
+    | '/integrations'
     | '/invoices'
     | '/leaks'
+    | '/notifications'
     | '/payments'
+    | '/profile'
+    | '/recovery'
     | '/reports'
+    | '/security'
+    | '/settings'
     | '/transactions'
+    | '/users'
     | '/vendors'
     | '/'
   id:
     | '__root__'
     | '/_shell'
     | '/_shell/ai-insights'
+    | '/_shell/analytics'
     | '/_shell/contracts'
+    | '/_shell/integrations'
     | '/_shell/invoices'
     | '/_shell/leaks'
+    | '/_shell/notifications'
     | '/_shell/payments'
+    | '/_shell/profile'
+    | '/_shell/recovery'
     | '/_shell/reports'
+    | '/_shell/security'
+    | '/_shell/settings'
     | '/_shell/transactions'
+    | '/_shell/users'
     | '/_shell/vendors'
     | '/_shell/'
   fileRoutesById: FileRoutesById
@@ -169,11 +265,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellAiInsightsRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/analytics': {
+      id: '/_shell/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof ShellAnalyticsRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/contracts': {
       id: '/_shell/contracts'
       path: '/contracts'
       fullPath: '/contracts'
       preLoaderRoute: typeof ShellContractsRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/integrations': {
+      id: '/_shell/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof ShellIntegrationsRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/invoices': {
@@ -190,11 +300,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellLeaksRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/notifications': {
+      id: '/_shell/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof ShellNotificationsRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/payments': {
       id: '/_shell/payments'
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof ShellPaymentsRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/profile': {
+      id: '/_shell/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ShellProfileRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/recovery': {
+      id: '/_shell/recovery'
+      path: '/recovery'
+      fullPath: '/recovery'
+      preLoaderRoute: typeof ShellRecoveryRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/reports': {
@@ -204,11 +335,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellReportsRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/security': {
+      id: '/_shell/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof ShellSecurityRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/settings': {
+      id: '/_shell/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ShellSettingsRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/transactions': {
       id: '/_shell/transactions'
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof ShellTransactionsRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/users': {
+      id: '/_shell/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof ShellUsersRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/vendors': {
@@ -223,24 +375,40 @@ declare module '@tanstack/react-router' {
 
 interface ShellRouteChildren {
   ShellAiInsightsRoute: typeof ShellAiInsightsRoute
+  ShellAnalyticsRoute: typeof ShellAnalyticsRoute
   ShellContractsRoute: typeof ShellContractsRoute
+  ShellIntegrationsRoute: typeof ShellIntegrationsRoute
   ShellInvoicesRoute: typeof ShellInvoicesRoute
   ShellLeaksRoute: typeof ShellLeaksRoute
+  ShellNotificationsRoute: typeof ShellNotificationsRoute
   ShellPaymentsRoute: typeof ShellPaymentsRoute
+  ShellProfileRoute: typeof ShellProfileRoute
+  ShellRecoveryRoute: typeof ShellRecoveryRoute
   ShellReportsRoute: typeof ShellReportsRoute
+  ShellSecurityRoute: typeof ShellSecurityRoute
+  ShellSettingsRoute: typeof ShellSettingsRoute
   ShellTransactionsRoute: typeof ShellTransactionsRoute
+  ShellUsersRoute: typeof ShellUsersRoute
   ShellVendorsRoute: typeof ShellVendorsRoute
   ShellIndexRoute: typeof ShellIndexRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
   ShellAiInsightsRoute: ShellAiInsightsRoute,
+  ShellAnalyticsRoute: ShellAnalyticsRoute,
   ShellContractsRoute: ShellContractsRoute,
+  ShellIntegrationsRoute: ShellIntegrationsRoute,
   ShellInvoicesRoute: ShellInvoicesRoute,
   ShellLeaksRoute: ShellLeaksRoute,
+  ShellNotificationsRoute: ShellNotificationsRoute,
   ShellPaymentsRoute: ShellPaymentsRoute,
+  ShellProfileRoute: ShellProfileRoute,
+  ShellRecoveryRoute: ShellRecoveryRoute,
   ShellReportsRoute: ShellReportsRoute,
+  ShellSecurityRoute: ShellSecurityRoute,
+  ShellSettingsRoute: ShellSettingsRoute,
   ShellTransactionsRoute: ShellTransactionsRoute,
+  ShellUsersRoute: ShellUsersRoute,
   ShellVendorsRoute: ShellVendorsRoute,
   ShellIndexRoute: ShellIndexRoute,
 }
