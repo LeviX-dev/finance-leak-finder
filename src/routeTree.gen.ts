@@ -22,6 +22,7 @@ import { Route as ShellPaymentsRouteImport } from './routes/_shell/payments'
 import { Route as ShellProfileRouteImport } from './routes/_shell/profile'
 import { Route as ShellRecoveryRouteImport } from './routes/_shell/recovery'
 import { Route as ShellReportsRouteImport } from './routes/_shell/reports'
+import { Route as ShellRolesRouteImport } from './routes/_shell/roles'
 import { Route as ShellSecurityRouteImport } from './routes/_shell/security'
 import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
 import { Route as ShellTransactionsRouteImport } from './routes/_shell/transactions'
@@ -92,6 +93,11 @@ const ShellReportsRoute = ShellReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellRolesRoute = ShellRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellSecurityRoute = ShellSecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ShellProfileRoute
   '/recovery': typeof ShellRecoveryRoute
   '/reports': typeof ShellReportsRoute
+  '/roles': typeof ShellRolesRoute
   '/security': typeof ShellSecurityRoute
   '/settings': typeof ShellSettingsRoute
   '/transactions': typeof ShellTransactionsRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ShellProfileRoute
   '/recovery': typeof ShellRecoveryRoute
   '/reports': typeof ShellReportsRoute
+  '/roles': typeof ShellRolesRoute
   '/security': typeof ShellSecurityRoute
   '/settings': typeof ShellSettingsRoute
   '/transactions': typeof ShellTransactionsRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/_shell/profile': typeof ShellProfileRoute
   '/_shell/recovery': typeof ShellRecoveryRoute
   '/_shell/reports': typeof ShellReportsRoute
+  '/_shell/roles': typeof ShellRolesRoute
   '/_shell/security': typeof ShellSecurityRoute
   '/_shell/settings': typeof ShellSettingsRoute
   '/_shell/transactions': typeof ShellTransactionsRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/recovery'
     | '/reports'
+    | '/roles'
     | '/security'
     | '/settings'
     | '/transactions'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/recovery'
     | '/reports'
+    | '/roles'
     | '/security'
     | '/settings'
     | '/transactions'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/_shell/profile'
     | '/_shell/recovery'
     | '/_shell/reports'
+    | '/_shell/roles'
     | '/_shell/security'
     | '/_shell/settings'
     | '/_shell/transactions'
@@ -335,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellReportsRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/roles': {
+      id: '/_shell/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof ShellRolesRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/security': {
       id: '/_shell/security'
       path: '/security'
@@ -385,6 +404,7 @@ interface ShellRouteChildren {
   ShellProfileRoute: typeof ShellProfileRoute
   ShellRecoveryRoute: typeof ShellRecoveryRoute
   ShellReportsRoute: typeof ShellReportsRoute
+  ShellRolesRoute: typeof ShellRolesRoute
   ShellSecurityRoute: typeof ShellSecurityRoute
   ShellSettingsRoute: typeof ShellSettingsRoute
   ShellTransactionsRoute: typeof ShellTransactionsRoute
@@ -405,6 +425,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellProfileRoute: ShellProfileRoute,
   ShellRecoveryRoute: ShellRecoveryRoute,
   ShellReportsRoute: ShellReportsRoute,
+  ShellRolesRoute: ShellRolesRoute,
   ShellSecurityRoute: ShellSecurityRoute,
   ShellSettingsRoute: ShellSettingsRoute,
   ShellTransactionsRoute: ShellTransactionsRoute,
