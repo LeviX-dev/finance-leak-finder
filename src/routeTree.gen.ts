@@ -10,6 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MfaRouteImport } from './routes/mfa'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
 import { Route as ShellAnalyticsRouteImport } from './routes/_shell/analytics'
@@ -31,6 +35,26 @@ import { Route as ShellVendorsRouteImport } from './routes/_shell/vendors'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MfaRoute = MfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellIndexRoute = ShellIndexRouteImport.update({
@@ -126,6 +150,10 @@ const ShellVendorsRoute = ShellVendorsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
+  '/register': typeof RegisterRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
@@ -145,6 +173,10 @@ export interface FileRoutesByFullPath {
   '/vendors': typeof ShellVendorsRoute
 }
 export interface FileRoutesByTo {
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
+  '/register': typeof RegisterRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
@@ -167,6 +199,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
+  '/register': typeof RegisterRoute
   '/_shell/ai-insights': typeof ShellAiInsightsRoute
   '/_shell/analytics': typeof ShellAnalyticsRoute
   '/_shell/contracts': typeof ShellContractsRoute
@@ -190,6 +226,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/mfa'
+    | '/register'
     | '/ai-insights'
     | '/analytics'
     | '/contracts'
@@ -209,6 +249,10 @@ export interface FileRouteTypes {
     | '/vendors'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/forgot-password'
+    | '/login'
+    | '/mfa'
+    | '/register'
     | '/ai-insights'
     | '/analytics'
     | '/contracts'
@@ -230,6 +274,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_shell'
+    | '/forgot-password'
+    | '/login'
+    | '/mfa'
+    | '/register'
     | '/_shell/ai-insights'
     | '/_shell/analytics'
     | '/_shell/contracts'
@@ -252,6 +300,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   ShellRoute: typeof ShellRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  MfaRoute: typeof MfaRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -261,6 +313,34 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof ShellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mfa': {
+      id: '/mfa'
+      path: '/mfa'
+      fullPath: '/mfa'
+      preLoaderRoute: typeof MfaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_shell/': {
@@ -438,6 +518,10 @@ const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   ShellRoute: ShellRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  MfaRoute: MfaRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
