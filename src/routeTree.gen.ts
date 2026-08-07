@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
+import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
 import { Route as ShellLeaksRouteImport } from './routes/_shell/leaks'
 
 const ShellRoute = ShellRouteImport.update({
@@ -22,6 +23,11 @@ const ShellIndexRoute = ShellIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellAiInsightsRoute = ShellAiInsightsRouteImport.update({
+  id: '/ai-insights',
+  path: '/ai-insights',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellLeaksRoute = ShellLeaksRouteImport.update({
   id: '/leaks',
   path: '/leaks',
@@ -30,24 +36,32 @@ const ShellLeaksRoute = ShellLeaksRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
+  '/ai-insights': typeof ShellAiInsightsRoute
   '/leaks': typeof ShellLeaksRoute
 }
 export interface FileRoutesByTo {
+  '/ai-insights': typeof ShellAiInsightsRoute
   '/leaks': typeof ShellLeaksRoute
   '/': typeof ShellIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
+  '/_shell/ai-insights': typeof ShellAiInsightsRoute
   '/_shell/leaks': typeof ShellLeaksRoute
   '/_shell/': typeof ShellIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/leaks'
+  fullPaths: '/' | '/ai-insights' | '/leaks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/leaks' | '/'
-  id: '__root__' | '/_shell' | '/_shell/leaks' | '/_shell/'
+  to: '/ai-insights' | '/leaks' | '/'
+  id:
+    | '__root__'
+    | '/_shell'
+    | '/_shell/ai-insights'
+    | '/_shell/leaks'
+    | '/_shell/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -70,6 +84,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellIndexRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/ai-insights': {
+      id: '/_shell/ai-insights'
+      path: '/ai-insights'
+      fullPath: '/ai-insights'
+      preLoaderRoute: typeof ShellAiInsightsRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/leaks': {
       id: '/_shell/leaks'
       path: '/leaks'
@@ -81,11 +102,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface ShellRouteChildren {
+  ShellAiInsightsRoute: typeof ShellAiInsightsRoute
   ShellLeaksRoute: typeof ShellLeaksRoute
   ShellIndexRoute: typeof ShellIndexRoute
 }
 
 const ShellRouteChildren: ShellRouteChildren = {
+  ShellAiInsightsRoute: ShellAiInsightsRoute,
   ShellLeaksRoute: ShellLeaksRoute,
   ShellIndexRoute: ShellIndexRoute,
 }
