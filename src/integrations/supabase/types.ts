@@ -14,7 +14,394 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      erp_connections: {
+        Row: {
+          account_name: string | null
+          created_at: string
+          credentials_ciphertext: string | null
+          external_account_id: string | null
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          metadata: Json
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          created_at?: string
+          credentials_ciphertext?: string | null
+          external_account_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          metadata?: Json
+          provider: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          created_at?: string
+          credentials_ciphertext?: string | null
+          external_account_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          metadata?: Json
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      erp_contracts: {
+        Row: {
+          connection_id: string
+          created_at: string
+          currency: string | null
+          end_date: string | null
+          external_id: string
+          id: string
+          name: string | null
+          raw: Json
+          start_date: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          vendor_name: string | null
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          end_date?: string | null
+          external_id: string
+          id?: string
+          name?: string | null
+          raw?: Json
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+          vendor_name?: string | null
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          end_date?: string | null
+          external_id?: string
+          id?: string
+          name?: string | null
+          raw?: Json
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_contracts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_invoices: {
+        Row: {
+          amount: number | null
+          amount_paid: number | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          due_date: string | null
+          external_id: string
+          id: string
+          invoice_number: string | null
+          issue_date: string | null
+          raw: Json
+          status: string | null
+          tax_amount: number | null
+          type: string | null
+          updated_at: string
+          user_id: string
+          vendor_external_id: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          amount?: number | null
+          amount_paid?: number | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          external_id: string
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          raw?: Json
+          status?: string | null
+          tax_amount?: number | null
+          type?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_external_id?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number | null
+          amount_paid?: number | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          external_id?: string
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          raw?: Json
+          status?: string | null
+          tax_amount?: number | null
+          type?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_external_id?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_invoices_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_oauth_states: {
+        Row: {
+          code_verifier: string | null
+          created_at: string
+          provider: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          created_at?: string
+          provider: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          created_at?: string
+          provider?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      erp_payments: {
+        Row: {
+          amount: number | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          external_id: string
+          id: string
+          invoice_external_id: string | null
+          method: string | null
+          paid_date: string | null
+          raw: Json
+          reference: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          vendor_name: string | null
+        }
+        Insert: {
+          amount?: number | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          external_id: string
+          id?: string
+          invoice_external_id?: string | null
+          method?: string | null
+          paid_date?: string | null
+          raw?: Json
+          reference?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          external_id?: string
+          id?: string
+          invoice_external_id?: string | null
+          method?: string | null
+          paid_date?: string | null
+          raw?: Json
+          reference?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_payments_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_sync_runs: {
+        Row: {
+          connection_id: string
+          contracts_synced: number
+          error: string | null
+          finished_at: string | null
+          id: string
+          invoices_synced: number
+          payments_synced: number
+          started_at: string
+          status: string
+          user_id: string
+          vendors_synced: number
+        }
+        Insert: {
+          connection_id: string
+          contracts_synced?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          invoices_synced?: number
+          payments_synced?: number
+          started_at?: string
+          status?: string
+          user_id: string
+          vendors_synced?: number
+        }
+        Update: {
+          connection_id?: string
+          contracts_synced?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          invoices_synced?: number
+          payments_synced?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+          vendors_synced?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_sync_runs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_vendors: {
+        Row: {
+          connection_id: string
+          created_at: string
+          email: string | null
+          external_id: string
+          id: string
+          name: string
+          phone: string | null
+          raw: Json
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          email?: string | null
+          external_id: string
+          id?: string
+          name: string
+          phone?: string | null
+          raw?: Json
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          email?: string | null
+          external_id?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          raw?: Json
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_vendors_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          company: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
