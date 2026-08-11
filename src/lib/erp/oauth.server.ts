@@ -12,12 +12,12 @@ export interface OAuthConfig {
 
 export interface StoredTokens {
   access_token: string;
-  refresh_token?: string;
+  refresh_token?: string | undefined;
   expires_at: number;
-  api_domain?: string;
-  realm_id?: string;
-  tenant_id?: string;
-  organization_id?: string;
+  api_domain?: string | undefined;
+  realm_id?: string | undefined;
+  tenant_id?: string | undefined;
+  organization_id?: string | undefined;
 }
 
 function env(name: string): string | undefined {
