@@ -1,6 +1,9 @@
 // Server-only reads of the user's ingested real ERP data, plus leakage analysis
 // computed from those real records.
 
+type Cell = string | number | boolean | null;
+export type Row = Record<string, Cell>;
+
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
@@ -8,9 +11,9 @@ async function admin() {
 
 export interface FinancialsPayload {
   connected: boolean;
-  invoices: Array<Record<string, unknown>>;
-  payments: Array<Record<string, unknown>>;
-  vendors: Array<Record<string, unknown>>;
+  invoices: Row[];
+  payments: Row[];
+  vendors: Row[];
 }
 
 export async function loadFinancials(userId: string): Promise<FinancialsPayload> {
@@ -38,9 +41,9 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
 
   return {
     connected: (invoices.data?.length ?? 0) + (payments.data?.length ?? 0) + (vendors.data?.length ?? 0) > 0,
-    invoices: (invoices.data ?? []) as Array<Record<string, unknown>>,
-    payments: (payments.data ?? []) as Array<Record<string, unknown>>,
-    vendors: (vendors.data ?? []) as Array<Record<string, unknown>>,
+    invoices: (invoices.data ?? []) as Row[],
+    payments: (payments.data ?? []) as Row[],
+    vendors: (vendors.data ?? []) as Row[],
   };
 }
 
@@ -105,7 +108,7 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
   const leaks: DetectedLeak[] = [];
 
   // 1. Duplicate invoices: same vendor + same amount + same date.
-  const dupKey = new Map<string, Array<Record<string, unknown>>>();
+  const dupKey = new Map<string, Row[]>();
   for (const i of invoices) {
     const key = `${i["vendor_name"]}|${money(i["amount"]).toFixed(2)}|${i["issue_date"]}`;
     dupKey.set(key, [...(dupKey.get(key) ?? []), i]);
@@ -152,7 +155,7 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
   }
 
   // 3. Duplicate payments: same vendor, amount and date.
-  const payKey = new Map<string, Array<Record<string, unknown>>>();
+  const payKey = new Map<string, Row[]>();
   for (const p of payments) {
     const key = `${p["vendor_name"]}|${money(p["amount"]).toFixed(2)}|${p["paid_date"]}`;
     payKey.set(key, [...(payKey.get(key) ?? []), p]);
