@@ -32,6 +32,7 @@ import { Route as ShellSettingsRouteImport } from './routes/_shell/settings'
 import { Route as ShellTransactionsRouteImport } from './routes/_shell/transactions'
 import { Route as ShellUsersRouteImport } from './routes/_shell/users'
 import { Route as ShellVendorsRouteImport } from './routes/_shell/vendors'
+import { Route as ApiPublicErpCallbackRouteImport } from './routes/api/public/erp/callback'
 
 const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
@@ -147,6 +148,11 @@ const ShellVendorsRoute = ShellVendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => ShellRoute,
 } as any)
+const ApiPublicErpCallbackRoute = ApiPublicErpCallbackRouteImport.update({
+  id: '/api/public/erp/callback',
+  path: '/api/public/erp/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof ShellTransactionsRoute
   '/users': typeof ShellUsersRoute
   '/vendors': typeof ShellVendorsRoute
+  '/api/public/erp/callback': typeof ApiPublicErpCallbackRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
@@ -195,6 +202,7 @@ export interface FileRoutesByTo {
   '/users': typeof ShellUsersRoute
   '/vendors': typeof ShellVendorsRoute
   '/': typeof ShellIndexRoute
+  '/api/public/erp/callback': typeof ApiPublicErpCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/_shell/users': typeof ShellUsersRoute
   '/_shell/vendors': typeof ShellVendorsRoute
   '/_shell/': typeof ShellIndexRoute
+  '/api/public/erp/callback': typeof ApiPublicErpCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/users'
     | '/vendors'
+    | '/api/public/erp/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/vendors'
     | '/'
+    | '/api/public/erp/callback'
   id:
     | '__root__'
     | '/_shell'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/_shell/users'
     | '/_shell/vendors'
     | '/_shell/'
+    | '/api/public/erp/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -304,6 +316,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
   RegisterRoute: typeof RegisterRoute
+  ApiPublicErpCallbackRoute: typeof ApiPublicErpCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -469,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellVendorsRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/api/public/erp/callback': {
+      id: '/api/public/erp/callback'
+      path: '/api/public/erp/callback'
+      fullPath: '/api/public/erp/callback'
+      preLoaderRoute: typeof ApiPublicErpCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -522,17 +542,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
   RegisterRoute: RegisterRoute,
+  ApiPublicErpCallbackRoute: ApiPublicErpCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

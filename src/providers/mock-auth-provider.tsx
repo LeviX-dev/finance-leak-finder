@@ -1,11 +1,9 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { currentUser, workspaces } from "@/data/mock";
 import type { AppUser, RoleId } from "@/types";
 
-/**
- * Fake auth context — UI only. No network calls, no tokens, no persistence.
- * Purely simulates the shape of a real session for presentation purposes.
- */
 interface AuthContextValue {
   user: AppUser;
   role: RoleId;
@@ -13,6 +11,10 @@ interface AuthContextValue {
   workspace: (typeof workspaces)[number];
   setWorkspaceId: (id: string) => void;
   workspaces: typeof workspaces;
+  /** Real Supabase session — null when signed out. */
+  session: Session | null;
+  loadingSession: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -20,18 +22,41 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function MockAuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<RoleId>(currentUser.role);
   const [workspaceId, setWorkspaceId] = useState(workspaces[0]!.id);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user: { ...currentUser, role },
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setLoadingSession(false);
+    });
+    void supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoadingSession(false);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const value = useMemo<AuthContextValue>(() => {
+    const meta = (session?.user.user_metadata ?? {}) as Record<string, string | undefined>;
+    const email = session?.user.email ?? currentUser.email;
+    const name = meta["full_name"] ?? (session ? email.split("@")[0]! : currentUser.name);
+    return {
+      user: { ...currentUser, role, name, email },
       role,
       setRole,
       workspace: workspaces.find((w) => w.id === workspaceId) ?? workspaces[0]!,
       setWorkspaceId,
       workspaces,
-    }),
-    [role, workspaceId],
-  );
+      session,
+      loadingSession,
+      signOut,
+    };
+  }, [role, workspaceId, session, loadingSession, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
