@@ -147,7 +147,7 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
       email: v.email ?? null,
       phone: v.phone ?? null,
       status: v.status ?? null,
-      raw: v.raw as object,
+      raw: v.raw as never,
     }));
     const invoiceRows = data.invoices.map((i) => ({
       user_id: userId,
@@ -164,7 +164,7 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
       currency: i.currency ?? null,
       status: i.status ?? null,
       type: i.type ?? null,
-      raw: i.raw as object,
+      raw: i.raw as never,
     }));
     const paymentRows = data.payments.map((p) => ({
       user_id: userId,
@@ -178,7 +178,7 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
       currency: p.currency ?? null,
       method: p.method ?? null,
       status: p.status ?? null,
-      raw: p.raw as object,
+      raw: p.raw as never,
     }));
 
     if (vendorRows.length) {
