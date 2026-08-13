@@ -9,6 +9,8 @@ import {
   syncConnectionFor,
 } from "@/lib/erp/service.server";
 import { loadFinancials, loadOverview } from "@/lib/erp/data.server";
+import { loadActivity } from "@/lib/erp/activity.server";
+
 
 export const getErpStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -42,3 +44,7 @@ export const getErpFinancials = createServerFn({ method: "GET" })
 export const getErpOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => loadOverview(context.userId));
+
+export const getErpActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => loadActivity(context.userId));
