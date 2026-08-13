@@ -44,3 +44,7 @@ export const getErpFinancials = createServerFn({ method: "GET" })
 export const getErpOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => loadOverview(context.userId));
+
+export const getErpActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => loadActivity(context.userId));
