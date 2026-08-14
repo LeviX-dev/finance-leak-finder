@@ -1,6 +1,14 @@
 // Server-only orchestration for ERP/accounting connections.
 import { randomBytes } from "node:crypto";
-import { buildAuthorizeUrl, packTokens, providerConfigured, unpackTokens, type StoredTokens } from "./oauth.server";
+import {
+  buildAuthorizeUrl,
+  dbConfiguredProviderIds,
+  envProviderConfigured,
+  packTokens,
+  providerConfigured,
+  unpackTokens,
+  type StoredTokens,
+} from "./oauth.server";
 import { pullProviderData } from "./sync.server";
 import { ERP_PROVIDERS } from "./providers";
 
@@ -9,8 +17,19 @@ async function admin() {
   return supabaseAdmin;
 }
 
-export function configuredProviders(): string[] {
-  return ERP_PROVIDERS.filter((p) => p.oauth && providerConfigured(p.id)).map((p) => p.id);
+export async function configuredProviders(): Promise<string[]> {
+  const dbIds = await dbConfiguredProviderIds();
+  const envIds = ERP_PROVIDERS.filter((p) => p.oauth && envProviderConfigured(p.id)).map((p) => p.id);
+  return [...new Set([...dbIds, ...envIds])];
+}
+
+export async function providerConfigStatus(): Promise<Array<{ provider: string; configured: boolean; source: "database" | "env" | "none" }>> {
+  const dbIds = new Set(await dbConfiguredProviderIds());
+  return ERP_PROVIDERS.filter((p) => p.oauth).map((p) => ({
+    provider: p.id,
+    configured: dbIds.has(p.id) || envProviderConfigured(p.id),
+    source: dbIds.has(p.id) ? ("database" as const) : envProviderConfigured(p.id) ? ("env" as const) : ("none" as const),
+  }));
 }
 
 export async function listConnectionsFor(userId: string) {
@@ -32,7 +51,7 @@ export async function listConnectionsFor(userId: string) {
 }
 
 export async function beginOAuth(userId: string, provider: string, origin: string) {
-  if (!providerConfigured(provider)) {
+  if (!(await providerConfigured(provider))) {
     throw new Error(
       `${provider} is not configured yet. Add the developer app credentials for this provider before connecting.`,
     );
@@ -41,7 +60,7 @@ export async function beginOAuth(userId: string, provider: string, origin: strin
   const db = await admin();
   const { error } = await db.from("erp_oauth_states").insert({ state, user_id: userId, provider });
   if (error) throw new Error(error.message);
-  return { url: buildAuthorizeUrl(provider, state, origin) };
+  return { url: await buildAuthorizeUrl(provider, state, origin) };
 }
 
 export async function completeOAuth(params: {
@@ -235,4 +254,18 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
     }
     throw new Error(message);
   }
+}
+
+export async function saveProviderCredentialsFor(
+  userId: string,
+  provider: string,
+  clientId: string,
+  clientSecret: string,
+  dataCenter?: string,
+) {
+  const { saveDbConfig } = await import("./oauth.server");
+  const extra: Record<string, string> = {};
+  if (dataCenter) extra["dc"] = dataCenter;
+  await saveDbConfig(provider, clientId, clientSecret, extra, userId);
+  return { ok: true };
 }
