@@ -278,6 +278,36 @@ export type Database = {
           },
         ]
       }
+      erp_provider_config: {
+        Row: {
+          client_id: string
+          client_secret_ciphertext: string
+          configured_by: string | null
+          created_at: string
+          extra_config: Json
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_secret_ciphertext: string
+          configured_by?: string | null
+          created_at?: string
+          extra_config?: Json
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_secret_ciphertext?: string
+          configured_by?: string | null
+          created_at?: string
+          extra_config?: Json
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       erp_sync_runs: {
         Row: {
           connection_id: string
