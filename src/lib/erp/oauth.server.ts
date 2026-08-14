@@ -1,4 +1,6 @@
 // Server-only: OAuth config + token exchange for each accounting provider.
+// Credentials are read from the database first (entered by the admin via the
+// app UI), then fall back to environment variables.
 import { decryptJson, encryptJson } from "./crypto.server";
 
 export interface OAuthConfig {
@@ -25,12 +27,18 @@ function env(name: string): string | undefined {
   return v && v.length > 0 ? v : undefined;
 }
 
-export function oauthConfig(provider: string): OAuthConfig | null {
+/**
+ * Build an OAuthConfig from explicit credentials (DB-stored or env).
+ * `extra` holds provider-specific options such as Zoho's data center.
+ */
+function buildConfig(
+  provider: string,
+  clientId: string,
+  clientSecret: string,
+  extra: Record<string, string> = {},
+): OAuthConfig | null {
   switch (provider) {
-    case "xero": {
-      const clientId = env("XERO_CLIENT_ID");
-      const clientSecret = env("XERO_CLIENT_SECRET");
-      if (!clientId || !clientSecret) return null;
+    case "xero":
       return {
         clientId,
         clientSecret,
@@ -39,11 +47,7 @@ export function oauthConfig(provider: string): OAuthConfig | null {
         scope:
           "openid profile email offline_access accounting.transactions.read accounting.contacts.read accounting.settings.read",
       };
-    }
-    case "quickbooks": {
-      const clientId = env("QUICKBOOKS_CLIENT_ID");
-      const clientSecret = env("QUICKBOOKS_CLIENT_SECRET");
-      if (!clientId || !clientSecret) return null;
+    case "quickbooks":
       return {
         clientId,
         clientSecret,
@@ -51,12 +55,8 @@ export function oauthConfig(provider: string): OAuthConfig | null {
         tokenUrl: "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
         scope: "com.intuit.quickbooks.accounting",
       };
-    }
     case "zoho_books": {
-      const clientId = env("ZOHO_BOOKS_CLIENT_ID");
-      const clientSecret = env("ZOHO_BOOKS_CLIENT_SECRET");
-      if (!clientId || !clientSecret) return null;
-      const dc = env("ZOHO_BOOKS_DC") ?? "com";
+      const dc = extra["dc"] ?? "com";
       return {
         clientId,
         clientSecret,
@@ -71,16 +71,95 @@ export function oauthConfig(provider: string): OAuthConfig | null {
   }
 }
 
-export function providerConfigured(provider: string): boolean {
-  return oauthConfig(provider) !== null;
+/** Synchronous env-var-only config — used as a fallback when no DB credentials exist. */
+function envConfig(provider: string): OAuthConfig | null {
+  switch (provider) {
+    case "xero": {
+      const clientId = env("XERO_CLIENT_ID");
+      const clientSecret = env("XERO_CLIENT_SECRET");
+      if (!clientId || !clientSecret) return null;
+      return buildConfig(provider, clientId, clientSecret);
+    }
+    case "quickbooks": {
+      const clientId = env("QUICKBOOKS_CLIENT_ID");
+      const clientSecret = env("QUICKBOOKS_CLIENT_SECRET");
+      if (!clientId || !clientSecret) return null;
+      return buildConfig(provider, clientId, clientSecret);
+    }
+    case "zoho_books": {
+      const clientId = env("ZOHO_BOOKS_CLIENT_ID");
+      const clientSecret = env("ZOHO_BOOKS_CLIENT_SECRET");
+      if (!clientId || !clientSecret) return null;
+      return buildConfig(provider, clientId, clientSecret, { dc: env("ZOHO_BOOKS_DC") ?? "com" });
+    }
+    default:
+      return null;
+  }
+}
+
+export function envProviderConfigured(provider: string): boolean {
+  return envConfig(provider) !== null;
+}
+
+/** Read a single provider's credentials from the database (encrypted). */
+async function dbConfig(provider: string): Promise<OAuthConfig | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("erp_provider_config")
+    .select("client_id, client_secret_ciphertext, extra_config")
+    .eq("provider", provider)
+    .maybeSingle();
+  if (!data) return null;
+  const clientId = data.client_id as string;
+  const clientSecret = decryptJson<string>(data.client_secret_ciphertext as string);
+  const extra = (data.extra_config as Record<string, string> | null) ?? {};
+  return buildConfig(provider, clientId, clientSecret, extra);
+}
+
+/** Return all provider IDs that have credentials stored in the database. */
+export async function dbConfiguredProviderIds(): Promise<string[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("erp_provider_config").select("provider");
+  return (data ?? []).map((r) => r.provider as string);
+}
+
+/** Save a provider's OAuth credentials to the database (encrypted). */
+export async function saveDbConfig(
+  provider: string,
+  clientId: string,
+  clientSecret: string,
+  extra: Record<string, string> = {},
+  configuredBy?: string,
+): Promise<void> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.from("erp_provider_config").upsert(
+    {
+      provider,
+      client_id: clientId,
+      client_secret_ciphertext: encryptJson(clientSecret),
+      extra_config: extra,
+      configured_by: configuredBy ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "provider" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+export async function oauthConfig(provider: string): Promise<OAuthConfig | null> {
+  return (await dbConfig(provider)) ?? envConfig(provider);
+}
+
+export async function providerConfigured(provider: string): Promise<boolean> {
+  return (await oauthConfig(provider)) !== null;
 }
 
 export function redirectUri(origin: string): string {
   return `${origin}/api/public/erp/callback`;
 }
 
-export function buildAuthorizeUrl(provider: string, state: string, origin: string): string {
-  const cfg = oauthConfig(provider);
+export async function buildAuthorizeUrl(provider: string, state: string, origin: string): Promise<string> {
+  const cfg = await oauthConfig(provider);
   if (!cfg) throw new Error(`${provider} is not configured`);
   const url = new URL(cfg.authorizeUrl);
   url.searchParams.set("response_type", "code");
@@ -121,7 +200,7 @@ function toStored(raw: Record<string, unknown>, previous?: StoredTokens): Stored
 }
 
 export async function exchangeCode(provider: string, code: string, origin: string): Promise<StoredTokens> {
-  const cfg = oauthConfig(provider);
+  const cfg = await oauthConfig(provider);
   if (!cfg) throw new Error(`${provider} is not configured`);
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -134,7 +213,7 @@ export async function exchangeCode(provider: string, code: string, origin: strin
 }
 
 export async function refreshTokens(provider: string, tokens: StoredTokens): Promise<StoredTokens> {
-  const cfg = oauthConfig(provider);
+  const cfg = await oauthConfig(provider);
   if (!cfg) throw new Error(`${provider} is not configured`);
   if (!tokens.refresh_token) throw new Error("No refresh token stored — reconnect the account");
   const body = new URLSearchParams({
