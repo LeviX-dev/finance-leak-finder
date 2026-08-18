@@ -261,6 +261,13 @@ function IntegrationsPage() {
         onConnect={startConnect}
         initialProvider={wizardProvider}
       />
+
+      <ProviderConfigDialog
+        open={configOpen}
+        onOpenChange={setConfigOpen}
+        initialProvider={configProvider}
+        onSaved={() => void qc.invalidateQueries({ queryKey: ["erp-status"] })}
+      />
     </>
   );
 }
