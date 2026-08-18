@@ -46,6 +46,8 @@ function IntegrationsPage() {
   const disconnectFn = useServerFn(disconnectErp);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardProvider, setWizardProvider] = useState<string | undefined>(undefined);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configProvider, setConfigProvider] = useState<string | undefined>(undefined);
   const [activeSync, setActiveSync] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["erp-status"], queryFn: () => fetchStatus({}) });
