@@ -109,6 +109,11 @@ function IntegrationsPage() {
     setWizardOpen(true);
   };
 
+  const openConfig = (provider: string) => {
+    setConfigProvider(provider);
+    setConfigOpen(true);
+  };
+
   return (
     <>
       <PageHeader
