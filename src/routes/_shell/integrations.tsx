@@ -199,10 +199,26 @@ function IntegrationsPage() {
                     Enterprise onboarding required — your administrator provisions this connection.
                   </p>
                 ) : !ready ? (
-                  <p className="mt-4 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-                    Add your {p.name} developer app credentials to enable one-click connection.
-                  </p>
-                ) : null}
+                  <div className="mt-4 space-y-2">
+                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                      Add your {p.name} developer app credentials to enable one-click connection.
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => openConfig(p.id)}>
+                      <Settings className="size-3.5" /> Configure {p.name}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => openConfig(p.id)}
+                    >
+                      <Settings className="size-3" /> Edit credentials
+                    </Button>
+                  </div>
+                )}
 
                 <div className="mt-auto flex gap-2 pt-4">
                   {conn ? (
