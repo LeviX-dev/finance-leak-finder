@@ -61,14 +61,13 @@ export function ProviderConfigDialog({ open, onOpenChange, initialProvider, onSa
     if (!provider || !clientId.trim() || !clientSecret.trim()) return;
     setBusy(true);
     try {
-      await saveFn({
-        data: {
-          provider,
-          clientId: clientId.trim(),
-          clientSecret: clientSecret.trim(),
-          dataCenter: isZoho ? dataCenter : undefined,
-        },
-      });
+      const payload: { provider: string; clientId: string; clientSecret: string; dataCenter?: string } = {
+        provider,
+        clientId: clientId.trim(),
+        clientSecret: clientSecret.trim(),
+      };
+      if (isZoho) payload.dataCenter = dataCenter;
+      await saveFn({ data: payload });
       toast.success(`${meta?.name ?? "Provider"} credentials saved — users can now connect.`);
       onSaved?.();
       onOpenChange(false);
