@@ -92,8 +92,8 @@ export function ProviderConfigDialog({ open, onOpenChange, initialProvider, onSa
           <div className="space-y-2">
             <Label htmlFor="pc-provider">Provider</Label>
             <Select
-              value={provider ?? undefined}
-              onValueChange={setProvider}
+              value={provider ?? ""}
+              onValueChange={(v) => setProvider(v || null)}
               disabled={!!initialProvider}
             >
               <SelectTrigger id="pc-provider">
