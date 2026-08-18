@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Settings } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge } from "@/components/common/tone-badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWizard } from "@/components/erp/connect-wizard";
+import { ProviderConfigDialog } from "@/components/erp/provider-config-dialog";
 import { SyncTimeline } from "@/components/erp/sync-timeline";
 import { ImportDashboard } from "@/components/erp/import-dashboard";
 import { ERP_PROVIDERS, type ErpConnectionView } from "@/lib/erp/providers";
@@ -45,6 +46,8 @@ function IntegrationsPage() {
   const disconnectFn = useServerFn(disconnectErp);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardProvider, setWizardProvider] = useState<string | undefined>(undefined);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configProvider, setConfigProvider] = useState<string | undefined>(undefined);
   const [activeSync, setActiveSync] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["erp-status"], queryFn: () => fetchStatus({}) });
@@ -104,6 +107,11 @@ function IntegrationsPage() {
   const openWizard = (provider?: string) => {
     setWizardProvider(provider);
     setWizardOpen(true);
+  };
+
+  const openConfig = (provider: string) => {
+    setConfigProvider(provider);
+    setConfigOpen(true);
   };
 
   return (
@@ -191,10 +199,26 @@ function IntegrationsPage() {
                     Enterprise onboarding required — your administrator provisions this connection.
                   </p>
                 ) : !ready ? (
-                  <p className="mt-4 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-                    Add your {p.name} developer app credentials to enable one-click connection.
-                  </p>
-                ) : null}
+                  <div className="mt-4 space-y-2">
+                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                      Add your {p.name} developer app credentials to enable one-click connection.
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => openConfig(p.id)}>
+                      <Settings className="size-3.5" /> Configure {p.name}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => openConfig(p.id)}
+                    >
+                      <Settings className="size-3" /> Edit credentials
+                    </Button>
+                  </div>
+                )}
 
                 <div className="mt-auto flex gap-2 pt-4">
                   {conn ? (
@@ -236,6 +260,13 @@ function IntegrationsPage() {
         connectedProviders={connections.map((c) => c.provider)}
         onConnect={startConnect}
         initialProvider={wizardProvider}
+      />
+
+      <ProviderConfigDialog
+        open={configOpen}
+        onOpenChange={setConfigOpen}
+        initialProvider={configProvider}
+        onSaved={() => void qc.invalidateQueries({ queryKey: ["erp-status"] })}
       />
     </>
   );

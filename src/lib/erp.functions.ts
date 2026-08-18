@@ -6,6 +6,8 @@ import {
   configuredProviders,
   disconnectFor,
   listConnectionsFor,
+  providerConfigStatus,
+  saveProviderCredentialsFor,
   syncConnectionFor,
 } from "@/lib/erp/service.server";
 import { loadFinancials, loadOverview } from "@/lib/erp/data.server";
@@ -15,7 +17,7 @@ import { loadActivity } from "@/lib/erp/activity.server";
 export const getErpStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => ({
-    configured: configuredProviders(),
+    configured: await configuredProviders(),
     connections: await listConnectionsFor(context.userId),
   }));
 
@@ -48,3 +50,22 @@ export const getErpOverview = createServerFn({ method: "GET" })
 export const getErpActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => loadActivity(context.userId));
+
+export const getProviderConfigs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => providerConfigStatus());
+
+export const saveProviderConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: { provider: string; clientId: string; clientSecret: string; dataCenter?: string }) => input,
+  )
+  .handler(async ({ data, context }) =>
+    saveProviderCredentialsFor(
+      context.userId,
+      data.provider,
+      data.clientId,
+      data.clientSecret,
+      data.dataCenter,
+    ),
+  );
