@@ -46,12 +46,38 @@ export interface PulledData {
   tokens: StoredTokens;
 }
 
-async function getJson(url: string, headers: Record<string, string>) {
+async function getJson(url: string, headers: Record<string, string>, step?: string) {
+  const label = step ? `step "${step}"` : "request";
   const res = await fetch(url, { headers: { Accept: "application/json", ...headers } });
   const text = await res.text();
-  if (!res.ok) throw new Error(`Provider request failed [${res.status}] ${url}: ${text.slice(0, 400)}`);
-  return JSON.parse(text) as Record<string, any>;
+  const endpoint = url.split("?")[0];
+
+  let parsed: Record<string, any> | null = null;
+  try {
+    parsed = JSON.parse(text) as Record<string, any>;
+  } catch {
+    parsed = null;
+  }
+
+  // Providers frequently return a descriptive body even on 2xx (Zoho uses
+  // { code, message }); surface that exact text instead of a generic failure.
+  const providerCode = parsed?.["code"];
+  const providerMessage =
+    parsed?.["message"] ??
+    parsed?.["Message"] ??
+    parsed?.["error_description"] ??
+    (typeof parsed?.["error"] === "string" ? parsed["error"] : undefined);
+
+  const failed = !res.ok || (typeof providerCode === "number" && providerCode !== 0);
+  if (failed) {
+    const detail = providerMessage ?? text.slice(0, 400) ?? "no response body";
+    const codePart = providerCode !== undefined ? ` (code ${providerCode})` : "";
+    throw new Error(`${detail}${codePart} — ${label}, GET ${endpoint} → HTTP ${res.status}`);
+  }
+  if (!parsed) throw new Error(`Unreadable response — ${label}, GET ${endpoint} → HTTP ${res.status}`);
+  return parsed;
 }
+
 
 function num(v: unknown): number | null {
   const n = Number(v);
