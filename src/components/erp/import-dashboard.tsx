@@ -1,14 +1,15 @@
 import { motion } from "motion/react";
-import { Activity, FileText, Receipt, Users } from "lucide-react";
+import { Activity, AlertOctagon, FileText, Receipt, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ToneBadge } from "@/components/common/tone-badge";
 import { providerMeta, type ErpConnectionView } from "@/lib/erp/providers";
-import type { ConnectionCounts } from "@/lib/erp/activity.server";
+import type { ConnectionCounts, SyncRunView } from "@/lib/erp/activity.server";
 
 interface Props {
   connections: ErpConnectionView[];
   counts: ConnectionCounts[];
   importing: boolean;
+  runs?: SyncRunView[];
 }
 
 const METRICS = [
@@ -17,8 +18,9 @@ const METRICS = [
   { key: "vendors", label: "Vendors", Icon: Users },
 ] as const;
 
-export function ImportDashboard({ connections, counts, importing }: Props) {
+export function ImportDashboard({ connections, counts, importing, runs = [] }: Props) {
   if (!connections.length) return null;
+
 
   const totals = counts.reduce(
     (acc, c) => ({
