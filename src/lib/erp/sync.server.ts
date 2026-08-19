@@ -214,15 +214,27 @@ async function pullQuickBooks(tokens: StoredTokens): Promise<PulledData> {
 async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
   const domain = tokens.api_domain ?? "https://www.zohoapis.com";
   const h = { Authorization: `Zoho-oauthtoken ${tokens.access_token}` };
-  const orgs = (await getJson(`${domain}/books/v3/organizations`, h))["organizations"] ?? [];
+  const zoho = async (path: string, step: string) => {
+    try {
+      return await getJson(`${domain}/books/v3/${path}`, h, step);
+    } catch (err) {
+      throw new Error(`Zoho Books: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const orgs = (await zoho("organizations", "organizations"))["organizations"] ?? [];
   const org = orgs.find((o: any) => o.organization_id === tokens.organization_id) ?? orgs[0];
-  if (!org) throw new Error("No Zoho Books organisation is available for this login");
+  if (!org)
+    throw new Error(
+      `Zoho Books: no organisation is available for this login — step "organizations", GET ${domain}/books/v3/organizations`,
+    );
   const orgId = org.organization_id;
   const q = `organization_id=${orgId}&per_page=200`;
 
-  const contacts = (await getJson(`${domain}/books/v3/contacts?${q}`, h))["contacts"] ?? [];
-  const bills = (await getJson(`${domain}/books/v3/bills?${q}`, h))["bills"] ?? [];
-  const payments = (await getJson(`${domain}/books/v3/vendorpayments?${q}`, h))["vendorpayments"] ?? [];
+  const contacts = (await zoho(`contacts?${q}`, "contacts"))["contacts"] ?? [];
+  const bills = (await zoho(`bills?${q}`, "bills"))["bills"] ?? [];
+  const payments = (await zoho(`vendorpayments?${q}`, "vendorpayments"))["vendorpayments"] ?? [];
+
 
   return {
     accountName: org.name ?? "Zoho Books organisation",
