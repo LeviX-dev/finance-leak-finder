@@ -129,7 +129,7 @@ function LeaksPage() {
             QuickBooks and we will analyze the imported records automatically.
           </p>
           <Button asChild>
-            <Link to="/integrations">Go to integrations</Link>
+            <Link to="/integrations" search={{ connect: undefined, message: undefined }}>Go to integrations</Link>
           </Button>
         </section>
       ) : (
