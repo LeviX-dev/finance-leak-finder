@@ -46,12 +46,38 @@ export interface PulledData {
   tokens: StoredTokens;
 }
 
-async function getJson(url: string, headers: Record<string, string>) {
+async function getJson(url: string, headers: Record<string, string>, step?: string) {
+  const label = step ? `step "${step}"` : "request";
   const res = await fetch(url, { headers: { Accept: "application/json", ...headers } });
   const text = await res.text();
-  if (!res.ok) throw new Error(`Provider request failed [${res.status}] ${url}: ${text.slice(0, 400)}`);
-  return JSON.parse(text) as Record<string, any>;
+  const endpoint = url.split("?")[0];
+
+  let parsed: Record<string, any> | null = null;
+  try {
+    parsed = JSON.parse(text) as Record<string, any>;
+  } catch {
+    parsed = null;
+  }
+
+  // Providers frequently return a descriptive body even on 2xx (Zoho uses
+  // { code, message }); surface that exact text instead of a generic failure.
+  const providerCode = parsed?.["code"];
+  const providerMessage =
+    parsed?.["message"] ??
+    parsed?.["Message"] ??
+    parsed?.["error_description"] ??
+    (typeof parsed?.["error"] === "string" ? parsed["error"] : undefined);
+
+  const failed = !res.ok || (typeof providerCode === "number" && providerCode !== 0);
+  if (failed) {
+    const detail = providerMessage ?? text.slice(0, 400) ?? "no response body";
+    const codePart = providerCode !== undefined ? ` (code ${providerCode})` : "";
+    throw new Error(`${detail}${codePart} — ${label}, GET ${endpoint} → HTTP ${res.status}`);
+  }
+  if (!parsed) throw new Error(`Unreadable response — ${label}, GET ${endpoint} → HTTP ${res.status}`);
+  return parsed;
 }
+
 
 function num(v: unknown): number | null {
   const n = Number(v);
@@ -188,15 +214,27 @@ async function pullQuickBooks(tokens: StoredTokens): Promise<PulledData> {
 async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
   const domain = tokens.api_domain ?? "https://www.zohoapis.com";
   const h = { Authorization: `Zoho-oauthtoken ${tokens.access_token}` };
-  const orgs = (await getJson(`${domain}/books/v3/organizations`, h))["organizations"] ?? [];
+  const zoho = async (path: string, step: string) => {
+    try {
+      return await getJson(`${domain}/books/v3/${path}`, h, step);
+    } catch (err) {
+      throw new Error(`Zoho Books: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const orgs = (await zoho("organizations", "organizations"))["organizations"] ?? [];
   const org = orgs.find((o: any) => o.organization_id === tokens.organization_id) ?? orgs[0];
-  if (!org) throw new Error("No Zoho Books organisation is available for this login");
+  if (!org)
+    throw new Error(
+      `Zoho Books: no organisation is available for this login — step "organizations", GET ${domain}/books/v3/organizations`,
+    );
   const orgId = org.organization_id;
   const q = `organization_id=${orgId}&per_page=200`;
 
-  const contacts = (await getJson(`${domain}/books/v3/contacts?${q}`, h))["contacts"] ?? [];
-  const bills = (await getJson(`${domain}/books/v3/bills?${q}`, h))["bills"] ?? [];
-  const payments = (await getJson(`${domain}/books/v3/vendorpayments?${q}`, h))["vendorpayments"] ?? [];
+  const contacts = (await zoho(`contacts?${q}`, "contacts"))["contacts"] ?? [];
+  const bills = (await zoho(`bills?${q}`, "bills"))["bills"] ?? [];
+  const payments = (await zoho(`vendorpayments?${q}`, "vendorpayments"))["vendorpayments"] ?? [];
+
 
   return {
     accountName: org.name ?? "Zoho Books organisation",

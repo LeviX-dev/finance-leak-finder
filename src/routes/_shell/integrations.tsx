@@ -143,7 +143,9 @@ function IntegrationsPage() {
           connections={connections}
           counts={activity.data?.counts ?? []}
           importing={importing}
+          runs={activity.data?.runs ?? []}
         />
+
 
         <SyncTimeline
           runs={activity.data?.runs ?? []}

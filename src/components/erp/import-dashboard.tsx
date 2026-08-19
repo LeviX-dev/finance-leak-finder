@@ -1,14 +1,15 @@
 import { motion } from "motion/react";
-import { Activity, FileText, Receipt, Users } from "lucide-react";
+import { Activity, AlertOctagon, FileText, Receipt, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ToneBadge } from "@/components/common/tone-badge";
 import { providerMeta, type ErpConnectionView } from "@/lib/erp/providers";
-import type { ConnectionCounts } from "@/lib/erp/activity.server";
+import type { ConnectionCounts, SyncRunView } from "@/lib/erp/activity.server";
 
 interface Props {
   connections: ErpConnectionView[];
   counts: ConnectionCounts[];
   importing: boolean;
+  runs?: SyncRunView[];
 }
 
 const METRICS = [
@@ -17,8 +18,9 @@ const METRICS = [
   { key: "vendors", label: "Vendors", Icon: Users },
 ] as const;
 
-export function ImportDashboard({ connections, counts, importing }: Props) {
+export function ImportDashboard({ connections, counts, importing, runs = [] }: Props) {
   if (!connections.length) return null;
+
 
   const totals = counts.reduce(
     (acc, c) => ({
@@ -72,22 +74,44 @@ export function ImportDashboard({ connections, counts, importing }: Props) {
         {connections.map((c) => {
           const cc = counts.find((x) => x.connectionId === c.id);
           const active = importing && c.status !== "error";
+          const lastRun = runs.find((r) => r.connectionId === c.id);
+          const failure =
+            c.lastError ?? (lastRun && lastRun.status === "failed" ? lastRun.error : null) ?? null;
+          const [headline, ...rest] = failure ? failure.split(" — ") : [];
           return (
-            <li
-              key={c.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-xs"
-            >
-              <span className="font-medium">{providerMeta(c.provider)?.name ?? c.provider}</span>
-              <span className="text-muted-foreground">
-                {cc?.invoices ?? 0} inv · {cc?.payments ?? 0} pay · {cc?.vendors ?? 0} ven · {cc?.contracts ?? 0} con
-              </span>
-              <span className="text-muted-foreground">
-                {active ? "syncing…" : c.lastSyncAt ? `synced ${new Date(c.lastSyncAt).toLocaleTimeString()}` : "never synced"}
-              </span>
+            <li key={c.id} className="rounded-md bg-muted/40 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">{providerMeta(c.provider)?.name ?? c.provider}</span>
+                <span className="text-muted-foreground">
+                  {cc?.invoices ?? 0} inv · {cc?.payments ?? 0} pay · {cc?.vendors ?? 0} ven · {cc?.contracts ?? 0} con
+                </span>
+                <span className="text-muted-foreground">
+                  {active
+                    ? "syncing…"
+                    : c.lastSyncAt
+                      ? `synced ${new Date(c.lastSyncAt).toLocaleTimeString()}`
+                      : "never synced"}
+                </span>
+              </div>
+
+              {failure && (
+                <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 p-2">
+                  <p className="flex items-start gap-1.5 font-medium text-destructive">
+                    <AlertOctagon className="mt-0.5 size-3.5 shrink-0" />
+                    <span className="break-words">{headline}</span>
+                  </p>
+                  {rest.length > 0 && (
+                    <p className="mt-1 break-all pl-5 font-mono text-[11px] text-muted-foreground">
+                      {rest.join(" — ")}
+                    </p>
+                  )}
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
+
     </section>
   );
 }
