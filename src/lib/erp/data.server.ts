@@ -21,19 +21,19 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
   const [invoices, payments, vendors] = await Promise.all([
     db
       .from("erp_invoices")
-      .select("id, external_id, invoice_number, vendor_name, issue_date, due_date, amount, tax_amount, amount_paid, currency, status, type")
+      .select("id, connection_id, created_at, external_id, invoice_number, vendor_name, issue_date, due_date, amount, tax_amount, amount_paid, currency, status, type")
       .eq("user_id", userId)
       .order("issue_date", { ascending: false })
       .limit(1000),
     db
       .from("erp_payments")
-      .select("id, external_id, reference, invoice_external_id, vendor_name, paid_date, amount, currency, method, status")
+      .select("id, connection_id, created_at, external_id, reference, invoice_external_id, vendor_name, paid_date, amount, currency, method, status")
       .eq("user_id", userId)
       .order("paid_date", { ascending: false })
       .limit(1000),
     db
       .from("erp_vendors")
-      .select("id, external_id, name, email, phone, status")
+      .select("id, connection_id, created_at, external_id, name, email, phone, status")
       .eq("user_id", userId)
       .order("name", { ascending: true })
       .limit(1000),
@@ -47,6 +47,13 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
   };
 }
 
+
+export interface LeakEvidence {
+  invoices: Row[];
+  payments: Row[];
+  vendors: Row[];
+}
+
 export interface DetectedLeak {
   id: string;
   type: string;
@@ -56,6 +63,18 @@ export interface DetectedLeak {
   currency: string;
   severity: "critical" | "high" | "medium" | "low";
   detail: string;
+  date: string | null;
+  connectionId: string | null;
+  syncRunId: string | null;
+  evidence: LeakEvidence;
+}
+
+export interface SyncRunOption {
+  id: string;
+  connectionId: string;
+  provider: string;
+  status: string;
+  startedAt: string;
 }
 
 export interface OverviewPayload {
@@ -71,7 +90,10 @@ export interface OverviewPayload {
   spendByMonth: Array<{ month: string; spend: number }>;
   topVendors: Array<{ vendor: string; spend: number }>;
   leaks: DetectedLeak[];
+  vendorOptions: string[];
+  syncRuns: SyncRunOption[];
 }
+
 
 function money(v: unknown): number {
   const n = Number(v);
@@ -80,6 +102,52 @@ function money(v: unknown): number {
 
 export async function loadOverview(userId: string): Promise<OverviewPayload> {
   const { invoices, payments, vendors, connected } = await loadFinancials(userId);
+  const db = await admin();
+  const [runsRes, connRes] = await Promise.all([
+    db
+      .from("erp_sync_runs")
+      .select("id, connection_id, status, started_at")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(50),
+    db.from("erp_connections").select("id, provider").eq("user_id", userId),
+  ]);
+  const providerById = new Map((connRes.data ?? []).map((c) => [c.id as string, c.provider as string]));
+  const syncRuns: SyncRunOption[] = (runsRes.data ?? []).map((r) => ({
+    id: r.id as string,
+    connectionId: r.connection_id as string,
+    provider: providerById.get(r.connection_id as string) ?? "unknown",
+    status: r.status as string,
+    startedAt: r.started_at as string,
+  }));
+
+  const vendorByName = new Map<string, Row>();
+  for (const v of vendors) vendorByName.set(String(v["name"] ?? "").toLowerCase(), v);
+
+  const attribute = (rows: Row[]) => {
+    const connectionId = (rows.find((r) => r["connection_id"])?.["connection_id"] as string) ?? null;
+    let syncRunId: string | null = null;
+    const created = rows
+      .map((r) => String(r["created_at"] ?? ""))
+      .filter(Boolean)
+      .sort()
+      .at(-1);
+    if (connectionId && created) {
+      syncRunId =
+        syncRuns.find((r) => r.connectionId === connectionId && r.startedAt <= created)?.id ?? null;
+    }
+    return { connectionId, syncRunId };
+  };
+
+  const evidenceFor = (inv: Row[], pay: Row[]): LeakEvidence => {
+    const names = new Set(
+      [...inv, ...pay].map((r) => String(r["vendor_name"] ?? "").toLowerCase()).filter(Boolean),
+    );
+    const ven = [...names].map((n) => vendorByName.get(n)).filter(Boolean) as Row[];
+    return { invoices: inv, payments: pay, vendors: ven };
+  };
+
+
 
   const spend = invoices.reduce((s, i) => s + money(i["amount"]), 0);
   const outstanding = invoices.reduce((s, i) => s + Math.max(money(i["amount"]) - money(i["amount_paid"]), 0), 0);
@@ -125,6 +193,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
       currency: String(first["currency"] ?? ""),
       severity: "critical",
       detail: `Invoices ${group.map((g) => g["invoice_number"] ?? g["external_id"]).join(", ")} share the same vendor, amount and date.`,
+      date: (first["issue_date"] as string | null) ?? null,
+      ...attribute(group),
+      evidence: evidenceFor(group, []),
     });
   }
 
@@ -150,6 +221,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
         currency: String(inv["currency"] ?? ""),
         severity: "high",
         detail: `Payments total ${paid.toFixed(2)} against an invoice of ${total.toFixed(2)}.`,
+        date: (inv["issue_date"] as string | null) ?? null,
+        ...attribute([inv]),
+        evidence: evidenceFor([inv], payments.filter((p) => String(p["invoice_external_id"] ?? "") === ref)),
       });
     }
   }
@@ -172,6 +246,12 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
       currency: String(first["currency"] ?? ""),
       severity: "critical",
       detail: `Same vendor, amount and payment date recorded ${group.length} times.`,
+      date: (first["paid_date"] as string | null) ?? null,
+      ...attribute(group),
+      evidence: evidenceFor(
+        invoices.filter((i) => String(i["vendor_name"] ?? "") === String(first["vendor_name"] ?? "") && money(i["amount"]) === money(first["amount"])),
+        group,
+      ),
     });
   }
 
@@ -190,6 +270,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
         currency: String(i["currency"] ?? ""),
         severity: "medium",
         detail: `Due ${due} with ${balance.toFixed(2)} still outstanding.`,
+        date: due,
+        ...attribute([i]),
+        evidence: evidenceFor([i], payments.filter((p) => String(p["invoice_external_id"] ?? "") === String(i["external_id"] ?? ""))),
       });
     }
   }
@@ -209,6 +292,8 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
     },
     spendByMonth,
     topVendors,
-    leaks: leaks.slice(0, 100),
+    leaks: leaks.slice(0, 200),
+    vendorOptions: [...new Set(leaks.map((l) => l.vendor))].sort(),
+    syncRuns,
   };
 }
