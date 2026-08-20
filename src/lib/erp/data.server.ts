@@ -21,19 +21,19 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
   const [invoices, payments, vendors] = await Promise.all([
     db
       .from("erp_invoices")
-      .select("id, external_id, invoice_number, vendor_name, issue_date, due_date, amount, tax_amount, amount_paid, currency, status, type")
+      .select("id, connection_id, created_at, external_id, invoice_number, vendor_name, issue_date, due_date, amount, tax_amount, amount_paid, currency, status, type")
       .eq("user_id", userId)
       .order("issue_date", { ascending: false })
       .limit(1000),
     db
       .from("erp_payments")
-      .select("id, external_id, reference, invoice_external_id, vendor_name, paid_date, amount, currency, method, status")
+      .select("id, connection_id, created_at, external_id, reference, invoice_external_id, vendor_name, paid_date, amount, currency, method, status")
       .eq("user_id", userId)
       .order("paid_date", { ascending: false })
       .limit(1000),
     db
       .from("erp_vendors")
-      .select("id, external_id, name, email, phone, status")
+      .select("id, connection_id, created_at, external_id, name, email, phone, status")
       .eq("user_id", userId)
       .order("name", { ascending: true })
       .limit(1000),
@@ -46,6 +46,7 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
     vendors: (vendors.data ?? []) as Row[],
   };
 }
+
 
 export interface DetectedLeak {
   id: string;
