@@ -48,6 +48,12 @@ export async function loadFinancials(userId: string): Promise<FinancialsPayload>
 }
 
 
+export interface LeakEvidence {
+  invoices: Row[];
+  payments: Row[];
+  vendors: Row[];
+}
+
 export interface DetectedLeak {
   id: string;
   type: string;
@@ -57,6 +63,18 @@ export interface DetectedLeak {
   currency: string;
   severity: "critical" | "high" | "medium" | "low";
   detail: string;
+  date: string | null;
+  connectionId: string | null;
+  syncRunId: string | null;
+  evidence: LeakEvidence;
+}
+
+export interface SyncRunOption {
+  id: string;
+  connectionId: string;
+  provider: string;
+  status: string;
+  startedAt: string;
 }
 
 export interface OverviewPayload {
@@ -72,7 +90,10 @@ export interface OverviewPayload {
   spendByMonth: Array<{ month: string; spend: number }>;
   topVendors: Array<{ vendor: string; spend: number }>;
   leaks: DetectedLeak[];
+  vendorOptions: string[];
+  syncRuns: SyncRunOption[];
 }
+
 
 function money(v: unknown): number {
   const n = Number(v);
