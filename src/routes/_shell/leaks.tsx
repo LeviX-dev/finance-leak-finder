@@ -3,11 +3,20 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { Download, Plug, RefreshCw, TrendingDown } from "lucide-react";
+import { Download, FilterX, Plug, RefreshCw, TrendingDown } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { DataTable, type Column } from "@/components/common/data-table";
 import { SeverityBadge, ToneBadge } from "@/components/common/tone-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -17,7 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getErpOverview } from "@/lib/erp.functions";
-import type { DetectedLeak } from "@/lib/erp/data.server";
+import type { DetectedLeak, Row } from "@/lib/erp/data.server";
 import { currency } from "@/lib/format";
 
 export const Route = createFileRoute("/_shell/leaks")({
@@ -46,6 +55,8 @@ const TABS = [
   { id: "Overdue liability", label: "Overdue" },
 ] as const;
 
+const SEVERITIES = ["critical", "high", "medium", "low"] as const;
+
 function money(amount: number, code: string) {
   if (!code) return currency(amount);
   try {
@@ -55,6 +66,62 @@ function money(amount: number, code: string) {
   }
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  invoice_number: "Invoice #",
+  external_id: "External ID",
+  vendor_name: "Vendor",
+  issue_date: "Issued",
+  due_date: "Due",
+  paid_date: "Paid",
+  amount: "Amount",
+  amount_paid: "Amount paid",
+  tax_amount: "Tax",
+  invoice_external_id: "Invoice ref",
+  currency: "Currency",
+  status: "Status",
+  method: "Method",
+  reference: "Reference",
+  name: "Name",
+  email: "Email",
+  phone: "Phone",
+  type: "Type",
+};
+
+function EvidenceTable({ title, rows, fields }: { title: string; rows: Row[]; fields: string[] }) {
+  if (!rows.length) return null;
+  return (
+    <div className="min-w-0 flex-1">
+      <h5 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title} ({rows.length})
+      </h5>
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/50">
+            <tr>
+              {fields.map((f) => (
+                <th key={f} className="whitespace-nowrap px-3 py-2 text-left font-medium text-muted-foreground">
+                  {FIELD_LABELS[f] ?? f}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, idx) => (
+              <tr key={String(r["id"] ?? idx)} className="border-t border-border">
+                {fields.map((f) => (
+                  <td key={f} className="whitespace-nowrap px-3 py-2 tabular-nums">
+                    {r[f] === null || r[f] === undefined || r[f] === "" ? "—" : String(r[f])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function LeaksPage() {
   const fetchOverview = useServerFn(getErpOverview);
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -62,14 +129,43 @@ function LeaksPage() {
     queryFn: () => fetchOverview({}),
   });
 
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("all");
+  const [tab, setTab] = useState<string>("all");
+  const [severity, setSeverity] = useState("all");
+  const [vendor, setVendor] = useState("all");
+  const [runId, setRunId] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [selected, setSelected] = useState<DetectedLeak | null>(null);
 
   const leaks = useMemo(() => data?.leaks ?? [], [data]);
+  const vendorOptions = data?.vendorOptions ?? [];
+  const syncRuns = data?.syncRuns ?? [];
+
   const rows = useMemo(
-    () => (tab === "all" ? leaks : leaks.filter((l) => l.type === tab)),
-    [leaks, tab],
+    () =>
+      leaks.filter((l) => {
+        if (tab !== "all" && l.type !== tab) return false;
+        if (severity !== "all" && l.severity !== severity) return false;
+        if (vendor !== "all" && l.vendor !== vendor) return false;
+        if (runId !== "all" && l.syncRunId !== runId) return false;
+        if (from && (!l.date || l.date < from)) return false;
+        if (to && (!l.date || l.date > to)) return false;
+        return true;
+      }),
+    [leaks, tab, severity, vendor, runId, from, to],
   );
+
+  const filtersActive =
+    tab !== "all" || severity !== "all" || vendor !== "all" || runId !== "all" || !!from || !!to;
+
+  const resetFilters = () => {
+    setTab("all");
+    setSeverity("all");
+    setVendor("all");
+    setRunId("all");
+    setFrom("");
+    setTo("");
+  };
 
   const columns: Column<DetectedLeak>[] = [
     {
@@ -84,6 +180,11 @@ function LeaksPage() {
     },
     { key: "type", header: "Category", render: (r) => <ToneBadge tone="brand">{r.type}</ToneBadge> },
     { key: "vendor", header: "Vendor", render: (r) => <span className="text-sm">{r.vendor}</span> },
+    {
+      key: "date",
+      header: "Date",
+      render: (r) => <span className="text-sm text-muted-foreground">{r.date ?? "—"}</span>,
+    },
     { key: "severity", header: "Severity", render: (r) => <SeverityBadge severity={r.severity} /> },
     {
       key: "amount",
@@ -95,7 +196,7 @@ function LeaksPage() {
     },
   ];
 
-  const total = leaks.reduce((s, l) => s + l.amount, 0);
+  const total = rows.reduce((s, l) => s + l.amount, 0);
   const connected = data?.connected ?? false;
 
   return (
@@ -104,7 +205,7 @@ function LeaksPage() {
         title="Financial leaks"
         description={
           connected
-            ? `${leaks.length} findings across ${data?.totals.invoices ?? 0} imported invoices and ${data?.totals.payments ?? 0} payments — ${currency(total)} of recoverable exposure.`
+            ? `${rows.length} of ${leaks.length} findings shown — ${currency(total)} of recoverable exposure in the current filter.`
             : "Connect an accounting or ERP account to detect leaks in your real invoices, payments and vendors."
         }
         crumbs={[{ label: "Financial Leaks" }]}
@@ -113,7 +214,7 @@ function LeaksPage() {
             <Button variant="outline" className="gap-2" onClick={() => void refetch()} disabled={isFetching}>
               <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Re-analyze
             </Button>
-            <Button className="gap-2" disabled={!leaks.length}>
+            <Button className="gap-2" disabled={!rows.length}>
               <Download className="size-4" /> Export register
             </Button>
           </>
@@ -134,7 +235,7 @@ function LeaksPage() {
         </section>
       ) : (
         <>
-          <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+          <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="flex-wrap">
               {TABS.map((t) => (
                 <TabsTrigger key={t.id} value={t.id}>
@@ -144,6 +245,70 @@ function LeaksPage() {
             </TabsList>
           </Tabs>
 
+          <section className="surface-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Severity</Label>
+              <Select value={severity} onValueChange={setSeverity}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All severities</SelectItem>
+                  {SEVERITIES.map((s) => (
+                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Vendor</Label>
+              <Select value={vendor} onValueChange={setVendor}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All vendors</SelectItem>
+                  {vendorOptions.map((v) => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Sync run</Label>
+              <Select value={runId} onValueChange={setRunId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sync runs</SelectItem>
+                  {syncRuns.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.provider} · {new Date(r.startedAt).toLocaleString()} · {r.status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs" htmlFor="leak-from">From date</Label>
+              <Input id="leak-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs" htmlFor="leak-to">To date</Label>
+              <div className="flex gap-2">
+                <Input id="leak-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={resetFilters}
+                  disabled={!filtersActive}
+                  aria-label="Clear filters"
+                >
+                  <FilterX className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </section>
+
           <DataTable
             data={rows}
             columns={columns}
@@ -152,14 +317,14 @@ function LeaksPage() {
             searchKeys={["title", "vendor", "type", "detail"]}
             searchPlaceholder="Search findings, vendors, categories…"
             onRowClick={setSelected}
-            emptyTitle="No findings in this category"
-            emptyDescription="Nothing matches the current filter. Try another category or run a fresh sync of your ERP data."
+            emptyTitle="No findings match these filters"
+            emptyDescription="Try widening the date range, severity or sync run, or run a fresh sync of your ERP data."
           />
         </>
       )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
           {selected && (
             <>
               <SheetHeader>
@@ -169,7 +334,8 @@ function LeaksPage() {
                 </div>
                 <SheetTitle className="mt-2 text-left text-lg">{selected.title}</SheetTitle>
                 <SheetDescription className="text-left">
-                  Detected from imported records for {selected.vendor}
+                  Evidence from imported records for {selected.vendor}
+                  {selected.date ? ` · ${selected.date}` : ""}
                 </SheetDescription>
               </SheetHeader>
 
@@ -190,6 +356,32 @@ function LeaksPage() {
                     <TrendingDown className="size-4 text-primary" /> Why this was flagged
                   </h4>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{selected.detail}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold">Matched records</h4>
+                  <EvidenceTable
+                    title="Invoices"
+                    rows={selected.evidence.invoices}
+                    fields={["invoice_number", "vendor_name", "issue_date", "due_date", "amount", "amount_paid", "currency", "status"]}
+                  />
+                  <EvidenceTable
+                    title="Payments"
+                    rows={selected.evidence.payments}
+                    fields={["reference", "invoice_external_id", "vendor_name", "paid_date", "amount", "currency", "method", "status"]}
+                  />
+                  <EvidenceTable
+                    title="Vendors"
+                    rows={selected.evidence.vendors}
+                    fields={["name", "email", "phone", "external_id", "status"]}
+                  />
+                  {!selected.evidence.invoices.length &&
+                    !selected.evidence.payments.length &&
+                    !selected.evidence.vendors.length && (
+                      <p className="text-sm text-muted-foreground">
+                        No underlying records were retained for this finding.
+                      </p>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
