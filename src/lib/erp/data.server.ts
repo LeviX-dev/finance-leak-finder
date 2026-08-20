@@ -193,6 +193,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
       currency: String(first["currency"] ?? ""),
       severity: "critical",
       detail: `Invoices ${group.map((g) => g["invoice_number"] ?? g["external_id"]).join(", ")} share the same vendor, amount and date.`,
+      date: (first["issue_date"] as string | null) ?? null,
+      ...attribute(group),
+      evidence: evidenceFor(group, []),
     });
   }
 
@@ -218,6 +221,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
         currency: String(inv["currency"] ?? ""),
         severity: "high",
         detail: `Payments total ${paid.toFixed(2)} against an invoice of ${total.toFixed(2)}.`,
+        date: (inv["issue_date"] as string | null) ?? null,
+        ...attribute([inv]),
+        evidence: evidenceFor([inv], payments.filter((p) => String(p["invoice_external_id"] ?? "") === ref)),
       });
     }
   }
@@ -240,6 +246,12 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
       currency: String(first["currency"] ?? ""),
       severity: "critical",
       detail: `Same vendor, amount and payment date recorded ${group.length} times.`,
+      date: (first["paid_date"] as string | null) ?? null,
+      ...attribute(group),
+      evidence: evidenceFor(
+        invoices.filter((i) => String(i["vendor_name"] ?? "") === String(first["vendor_name"] ?? "") && money(i["amount"]) === money(first["amount"])),
+        group,
+      ),
     });
   }
 
@@ -258,6 +270,9 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
         currency: String(i["currency"] ?? ""),
         severity: "medium",
         detail: `Due ${due} with ${balance.toFixed(2)} still outstanding.`,
+        date: due,
+        ...attribute([i]),
+        evidence: evidenceFor([i], payments.filter((p) => String(p["invoice_external_id"] ?? "") === String(i["external_id"] ?? ""))),
       });
     }
   }
@@ -277,6 +292,8 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
     },
     spendByMonth,
     topVendors,
-    leaks: leaks.slice(0, 100),
+    leaks: leaks.slice(0, 200),
+    vendorOptions: [...new Set(leaks.map((l) => l.vendor))].sort(),
+    syncRuns,
   };
 }
