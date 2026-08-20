@@ -102,6 +102,52 @@ function money(v: unknown): number {
 
 export async function loadOverview(userId: string): Promise<OverviewPayload> {
   const { invoices, payments, vendors, connected } = await loadFinancials(userId);
+  const db = await admin();
+  const [runsRes, connRes] = await Promise.all([
+    db
+      .from("erp_sync_runs")
+      .select("id, connection_id, status, started_at")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(50),
+    db.from("erp_connections").select("id, provider").eq("user_id", userId),
+  ]);
+  const providerById = new Map((connRes.data ?? []).map((c) => [c.id as string, c.provider as string]));
+  const syncRuns: SyncRunOption[] = (runsRes.data ?? []).map((r) => ({
+    id: r.id as string,
+    connectionId: r.connection_id as string,
+    provider: providerById.get(r.connection_id as string) ?? "unknown",
+    status: r.status as string,
+    startedAt: r.started_at as string,
+  }));
+
+  const vendorByName = new Map<string, Row>();
+  for (const v of vendors) vendorByName.set(String(v["name"] ?? "").toLowerCase(), v);
+
+  const attribute = (rows: Row[]) => {
+    const connectionId = (rows.find((r) => r["connection_id"])?.["connection_id"] as string) ?? null;
+    let syncRunId: string | null = null;
+    const created = rows
+      .map((r) => String(r["created_at"] ?? ""))
+      .filter(Boolean)
+      .sort()
+      .at(-1);
+    if (connectionId && created) {
+      syncRunId =
+        syncRuns.find((r) => r.connectionId === connectionId && r.startedAt <= created)?.id ?? null;
+    }
+    return { connectionId, syncRunId };
+  };
+
+  const evidenceFor = (inv: Row[], pay: Row[]): LeakEvidence => {
+    const names = new Set(
+      [...inv, ...pay].map((r) => String(r["vendor_name"] ?? "").toLowerCase()).filter(Boolean),
+    );
+    const ven = [...names].map((n) => vendorByName.get(n)).filter(Boolean) as Row[];
+    return { invoices: inv, payments: pay, vendors: ven };
+  };
+
+
 
   const spend = invoices.reduce((s, i) => s + money(i["amount"]), 0);
   const outstanding = invoices.reduce((s, i) => s + Math.max(money(i["amount"]) - money(i["amount_paid"]), 0), 0);
