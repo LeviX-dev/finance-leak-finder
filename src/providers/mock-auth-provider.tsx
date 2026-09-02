@@ -1,13 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyAccess, type AppPermission, type AppRole } from "@/lib/admin.functions";
 import { currentUser, workspaces } from "@/data/mock";
 import type { AppUser, RoleId } from "@/types";
 
 interface AuthContextValue {
   user: AppUser;
   role: RoleId;
-  setRole: (role: RoleId) => void;
+  permissions: AppPermission[];
+  can: (permission: AppPermission) => boolean;
+  isAdmin: boolean;
+  status: string;
+  accessLoading: boolean;
+  refreshAccess: () => void;
   workspace: (typeof workspaces)[number];
   setWorkspaceId: (id: string) => void;
   workspaces: typeof workspaces;
@@ -20,10 +28,11 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function MockAuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<RoleId>(currentUser.role);
   const [workspaceId, setWorkspaceId] = useState(workspaces[0]!.id);
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
+  const queryClient = useQueryClient();
+  const fetchAccess = useServerFn(getMyAccess);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
@@ -37,18 +46,53 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const accessQuery = useQuery({
+    queryKey: ["my-access", session?.user.id ?? null],
+    queryFn: () => fetchAccess(),
+    enabled: Boolean(session),
+    staleTime: 30_000,
+  });
+
   const signOut = useCallback(async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
     await supabase.auth.signOut();
-  }, []);
+  }, [queryClient]);
+
+  const refreshAccess = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["my-access"] });
+  }, [queryClient]);
 
   const value = useMemo<AuthContextValue>(() => {
+    const access = accessQuery.data;
     const meta = (session?.user.user_metadata ?? {}) as Record<string, string | undefined>;
-    const email = session?.user.email ?? currentUser.email;
-    const name = meta["full_name"] ?? (session ? email.split("@")[0]! : currentUser.name);
+    const email = access?.profile?.email ?? session?.user.email ?? currentUser.email;
+    const name =
+      access?.profile?.full_name ?? meta["full_name"] ?? (session ? email.split("@")[0]! : currentUser.name);
+    const role = (access?.role ?? "viewer") as AppRole;
+    const permissions = (access?.permissions ?? []) as AppPermission[];
     return {
-      user: { ...currentUser, role, name, email },
-      role,
-      setRole,
+      user: {
+        ...currentUser,
+        id: access?.userId ?? currentUser.id,
+        role: role as RoleId,
+        name,
+        email,
+        department: access?.profile?.department ?? currentUser.department,
+        status: (access?.profile?.status ?? "active") as AppUser["status"],
+        initials: name
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((p) => p[0]?.toUpperCase() ?? "")
+          .join(""),
+      },
+      role: role as RoleId,
+      permissions,
+      can: (permission: AppPermission) => permissions.includes(permission),
+      isAdmin: role === "admin",
+      status: access?.profile?.status ?? "active",
+      accessLoading: accessQuery.isLoading,
+      refreshAccess,
       workspace: workspaces.find((w) => w.id === workspaceId) ?? workspaces[0]!,
       setWorkspaceId,
       workspaces,
@@ -56,7 +100,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       loadingSession,
       signOut,
     };
-  }, [role, workspaceId, session, loadingSession, signOut]);
+  }, [accessQuery.data, accessQuery.isLoading, refreshAccess, workspaceId, session, loadingSession, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
