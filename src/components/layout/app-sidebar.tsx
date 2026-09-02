@@ -62,6 +62,11 @@ function WorkspaceSwitcher() {
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { can } = useMockAuth();
+
+  const visibleGroups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter((i) => !i.permission || can(i.permission)) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-3 pb-4">
@@ -70,12 +75,13 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-5">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label}>
             <p className="px-3 pb-1.5 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
               {group.label}
             </p>
             <ul className="space-y-0.5">
+
               {group.items.map((item) => {
                 const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
                 return (
