@@ -29,6 +29,8 @@ export interface NavItem {
   to: string;
   icon: LucideIcon;
   badge?: string;
+  /** Permission required to see this entry. Undefined = any signed-in member. */
+  permission?: "view" | "manage_users" | "manage_roles" | "configure" | "export" | "recover";
 }
 
 export interface NavGroup {
@@ -42,7 +44,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard },
       { label: "AI Insights", to: "/ai-insights", icon: Brain, badge: "New" },
-      { label: "Financial Leaks", to: "/leaks", icon: TrendingDown, badge: "27" },
+      { label: "Financial Leaks", to: "/leaks", icon: TrendingDown },
     ],
   },
   {
@@ -53,7 +55,7 @@ export const navGroups: NavGroup[] = [
       { label: "Payments", to: "/payments", icon: Wallet },
       { label: "Contracts", to: "/contracts", icon: FileText },
       { label: "Vendors", to: "/vendors", icon: Building2 },
-      { label: "Recovery Center", to: "/recovery", icon: LifeBuoy },
+      { label: "Recovery Center", to: "/recovery", icon: LifeBuoy, permission: "recover" },
     ],
   },
   {
@@ -67,13 +69,14 @@ export const navGroups: NavGroup[] = [
   {
     label: "Administration",
     items: [
-      { label: "Users", to: "/users", icon: Users },
-      { label: "Roles & Permissions", to: "/roles", icon: ShieldCheck },
-      { label: "Integrations", to: "/integrations", icon: Plug },
-      { label: "Settings", to: "/settings", icon: Settings },
+      { label: "Users", to: "/users", icon: Users, permission: "manage_users" },
+      { label: "Roles & Permissions", to: "/roles", icon: ShieldCheck, permission: "manage_roles" },
+      { label: "Integrations", to: "/integrations", icon: Plug, permission: "configure" },
+      { label: "Settings", to: "/settings", icon: Settings, permission: "configure" },
     ],
   },
 ];
+
 
 export interface RoleDefinition {
   id: RoleId;
