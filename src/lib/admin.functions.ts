@@ -195,7 +195,12 @@ export const setMemberStatus = createServerFn({ method: "POST" })
 export const updateMemberProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (input: { userId: string; fullName?: string; department?: string; jobTitle?: string }) => input,
+    (input: {
+      userId: string;
+      fullName?: string | undefined;
+      department?: string | undefined;
+      jobTitle?: string | undefined;
+    }) => input,
   )
   .handler(async ({ data, context }) => {
     await requireAdmin(context as unknown as Ctx);
@@ -218,9 +223,9 @@ export const inviteMember = createServerFn({ method: "POST" })
     (input: {
       email: string;
       role: AppRole;
-      fullName?: string;
-      department?: string;
-      password?: string;
+      fullName?: string | undefined;
+      department?: string | undefined;
+      password?: string | undefined;
     }) => input,
   )
   .handler(async ({ data, context }) => {

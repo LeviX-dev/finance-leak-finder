@@ -85,8 +85,12 @@ function UsersPage() {
   const membersQuery = useQuery({ queryKey: ["members"], queryFn: () => fetchMembers() });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["members"] });
 
+  const setRoleFn = useServerFn(setMemberRole);
+  const setStatusFn = useServerFn(setMemberStatus);
+  const removeFn = useServerFn(removeMember);
+
   const roleMutation = useMutation({
-    mutationFn: useServerFn(setMemberRole),
+    mutationFn: (vars: { userId: string; role: AppRole }) => setRoleFn({ data: vars }),
     onSuccess: () => {
       toast.success("Role updated");
       void invalidate();
@@ -94,7 +98,7 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const statusMutation = useMutation({
-    mutationFn: useServerFn(setMemberStatus),
+    mutationFn: (vars: { userId: string; status: "active" | "suspended" }) => setStatusFn({ data: vars }),
     onSuccess: () => {
       toast.success("Access updated");
       void invalidate();
@@ -102,13 +106,14 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const removeMutation = useMutation({
-    mutationFn: useServerFn(removeMember),
+    mutationFn: (vars: { userId: string }) => removeFn({ data: vars }),
     onSuccess: () => {
       toast.success("Member removed");
       void invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const members = (membersQuery.data ?? []).filter((m) => {
     const q = query.trim().toLowerCase();
@@ -215,8 +220,9 @@ function UsersPage() {
                     {m.status === "active" ? "Suspend access" : "Restore access"}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    variant="destructive"
+                    className="text-destructive focus:text-destructive"
                     disabled={m.id === user.id}
+
                     onSelect={() => {
                       if (confirm(`Permanently remove ${m.email}? This deletes their account.`))
                         removeMutation.mutate({ userId: m.id });
@@ -252,9 +258,18 @@ function InviteDialog({
   const [role, setRole] = useState<AppRole>("viewer");
   const [created, setCreated] = useState<{ email: string; temporaryPassword: string | null } | null>(null);
 
+  const inviteFn = useServerFn(inviteMember);
   const mutation = useMutation({
-    mutationFn: useServerFn(inviteMember),
+    mutationFn: (vars: {
+      email: string;
+      role: AppRole;
+      fullName?: string | undefined;
+      department?: string | undefined;
+      password?: string | undefined;
+    }) => inviteFn({ data: vars }),
+
     onSuccess: (res) => {
+
       setCreated({ email: res.email, temporaryPassword: res.temporaryPassword ?? null });
       setEmail("");
       setFullName("");

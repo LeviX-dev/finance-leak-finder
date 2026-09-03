@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/common/permission-gate";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge, ToneBadge } from "@/components/common/tone-badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,11 @@ export const Route = createFileRoute("/_shell/recovery")({
       { property: "og:description", content: "Track every recovery claim from identification through credit issued and cash returned." },
     ],
   }),
-  component: RecoveryPage,
+  component: () => (
+    <PermissionGate permission="recover">
+      <RecoveryPage />
+    </PermissionGate>
+  ),
 });
 
 function RecoveryPage() {

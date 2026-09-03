@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/common/permission-gate";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge, ToneBadge } from "@/components/common/tone-badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,11 @@ export const Route = createFileRoute("/_shell/settings")({
       { property: "og:description", content: "Workspace preferences, detection thresholds, notification routing and appearance." },
     ],
   }),
-  component: SettingsPage,
+  component: () => (
+    <PermissionGate permission="configure">
+      <SettingsPage />
+    </PermissionGate>
+  ),
 });
 
 function SettingsPage() {
