@@ -1,4 +1,5 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { PermissionGate } from "@/components/common/permission-gate";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,7 +34,11 @@ export const Route = createFileRoute("/_shell/integrations")({
     connect: typeof s["connect"] === "string" ? (s["connect"] as string) : undefined,
     message: typeof s["message"] === "string" ? (s["message"] as string) : undefined,
   }),
-  component: IntegrationsPage,
+  component: () => (
+    <PermissionGate permission="configure">
+      <IntegrationsPage />
+    </PermissionGate>
+  ),
 });
 
 function IntegrationsPage() {
