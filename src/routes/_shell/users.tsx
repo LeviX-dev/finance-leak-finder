@@ -263,10 +263,11 @@ function InviteDialog({
     mutationFn: (vars: {
       email: string;
       role: AppRole;
-      fullName?: string;
-      department?: string;
-      password?: string;
+      fullName?: string | undefined;
+      department?: string | undefined;
+      password?: string | undefined;
     }) => inviteFn({ data: vars }),
+
     onSuccess: (res) => {
 
       setCreated({ email: res.email, temporaryPassword: res.temporaryPassword ?? null });
