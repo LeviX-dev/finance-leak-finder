@@ -85,8 +85,12 @@ function UsersPage() {
   const membersQuery = useQuery({ queryKey: ["members"], queryFn: () => fetchMembers() });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["members"] });
 
+  const setRoleFn = useServerFn(setMemberRole);
+  const setStatusFn = useServerFn(setMemberStatus);
+  const removeFn = useServerFn(removeMember);
+
   const roleMutation = useMutation({
-    mutationFn: useServerFn(setMemberRole),
+    mutationFn: (vars: { userId: string; role: AppRole }) => setRoleFn({ data: vars }),
     onSuccess: () => {
       toast.success("Role updated");
       void invalidate();
@@ -94,7 +98,7 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const statusMutation = useMutation({
-    mutationFn: useServerFn(setMemberStatus),
+    mutationFn: (vars: { userId: string; status: "active" | "suspended" }) => setStatusFn({ data: vars }),
     onSuccess: () => {
       toast.success("Access updated");
       void invalidate();
@@ -102,13 +106,14 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const removeMutation = useMutation({
-    mutationFn: useServerFn(removeMember),
+    mutationFn: (vars: { userId: string }) => removeFn({ data: vars }),
     onSuccess: () => {
       toast.success("Member removed");
       void invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const members = (membersQuery.data ?? []).filter((m) => {
     const q = query.trim().toLowerCase();
