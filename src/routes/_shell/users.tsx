@@ -258,9 +258,17 @@ function InviteDialog({
   const [role, setRole] = useState<AppRole>("viewer");
   const [created, setCreated] = useState<{ email: string; temporaryPassword: string | null } | null>(null);
 
+  const inviteFn = useServerFn(inviteMember);
   const mutation = useMutation({
-    mutationFn: useServerFn(inviteMember),
+    mutationFn: (vars: {
+      email: string;
+      role: AppRole;
+      fullName?: string;
+      department?: string;
+      password?: string;
+    }) => inviteFn({ data: vars }),
     onSuccess: (res) => {
+
       setCreated({ email: res.email, temporaryPassword: res.temporaryPassword ?? null });
       setEmail("");
       setFullName("");
