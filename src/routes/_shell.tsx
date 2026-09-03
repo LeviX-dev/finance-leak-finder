@@ -1,5 +1,8 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { useMockAuth } from "@/providers/mock-auth-provider";
 
