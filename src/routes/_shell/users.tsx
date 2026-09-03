@@ -220,8 +220,9 @@ function UsersPage() {
                     {m.status === "active" ? "Suspend access" : "Restore access"}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    variant="destructive"
+                    className="text-destructive focus:text-destructive"
                     disabled={m.id === user.id}
+
                     onSelect={() => {
                       if (confirm(`Permanently remove ${m.email}? This deletes their account.`))
                         removeMutation.mutate({ userId: m.id });
