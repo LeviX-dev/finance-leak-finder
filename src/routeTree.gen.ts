@@ -14,6 +14,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
 import { Route as ShellAnalyticsRouteImport } from './routes/_shell/analytics'
@@ -56,6 +57,11 @@ const MfaRoute = MfaRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShellIndexRoute = ShellIndexRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/register': typeof RegisterRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/register': typeof RegisterRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
   '/contracts': typeof ShellContractsRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
   '/register': typeof RegisterRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/_shell/ai-insights': typeof ShellAiInsightsRoute
   '/_shell/analytics': typeof ShellAnalyticsRoute
   '/_shell/contracts': typeof ShellContractsRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/register'
+    | '/verify-email'
     | '/ai-insights'
     | '/analytics'
     | '/contracts'
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/register'
+    | '/verify-email'
     | '/ai-insights'
     | '/analytics'
     | '/contracts'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/register'
+    | '/verify-email'
     | '/_shell/ai-insights'
     | '/_shell/analytics'
     | '/_shell/contracts'
@@ -316,6 +328,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
   RegisterRoute: typeof RegisterRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   ApiPublicErpCallbackRoute: typeof ApiPublicErpCallbackRoute
 }
 
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_shell/': {
@@ -542,6 +562,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
   RegisterRoute: RegisterRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   ApiPublicErpCallbackRoute: ApiPublicErpCallbackRoute,
 }
 export const routeTree = rootRouteImport

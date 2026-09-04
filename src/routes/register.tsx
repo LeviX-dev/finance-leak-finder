@@ -45,9 +45,10 @@ function RegisterPage() {
     if (data.session) {
       void navigate({ to: "/" });
     } else {
-      toast.success("Check your inbox to confirm your email, then sign in.");
-      void navigate({ to: "/login" });
+      toast.success("Check your inbox to confirm your email.");
+      void navigate({ to: "/verify-email", search: { email: form.email } });
     }
+
   };
 
   return (
