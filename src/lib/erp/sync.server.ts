@@ -229,11 +229,27 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
       `Zoho Books: no organisation is available for this login — step "organizations", GET ${domain}/books/v3/organizations`,
     );
   const orgId = org.organization_id;
-  const q = `organization_id=${orgId}&per_page=200`;
 
-  const contacts = (await zoho(`contacts?${q}`, "contacts"))["contacts"] ?? [];
-  const bills = (await zoho(`bills?${q}`, "bills"))["bills"] ?? [];
-  const payments = (await zoho(`vendorpayments?${q}`, "vendorpayments"))["vendorpayments"] ?? [];
+  // Zoho paginates at 200 rows; walk every page so nothing is silently dropped.
+  const zohoAll = async (resource: string, key: string, step: string) => {
+    const out: any[] = [];
+    for (let page = 1; page <= 20; page++) {
+      const json = await zoho(`${resource}?organization_id=${orgId}&per_page=200&page=${page}`, step);
+      const rows = json[key] ?? [];
+      out.push(...rows);
+      const more = json["page_context"]?.has_more_page;
+      if (!more || rows.length === 0) break;
+    }
+    return out;
+  };
+
+  const contacts = await zohoAll("contacts", "contacts", "contacts");
+  const bills = await zohoAll("bills", "bills", "bills");
+  // Customer invoices are a separate resource from vendor bills — pull both.
+  const salesInvoices = await zohoAll("invoices", "invoices", "invoices");
+  const vendorPayments = await zohoAll("vendorpayments", "vendorpayments", "vendorpayments");
+  const customerPayments = await zohoAll("customerpayments", "customerpayments", "customerpayments");
+
 
 
   return {
