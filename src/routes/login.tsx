@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { AlertCircle, CheckCircle2, MailWarning, ShieldAlert } from "lucide-react";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { getAccountStatus, type AccountState } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -21,23 +24,72 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+const BANNERS: Record<Exclude<AccountState, "unknown">, { tone: string; icon: typeof AlertCircle; title: string; next: string }> = {
+  unconfirmed: {
+    tone: "bg-warning/10 text-warning",
+    icon: MailWarning,
+    title: "Your email is not confirmed yet.",
+    next: "Open the confirmation link we emailed you, or send a new one from the verification screen.",
+  },
+  confirmed: {
+    tone: "bg-primary/10 text-primary",
+    icon: CheckCircle2,
+    title: "This account is confirmed and ready to sign in.",
+    next: "Enter your password to continue. Use “Forgot?” if you no longer have it.",
+  },
+  blocked: {
+    tone: "bg-destructive/10 text-destructive",
+    icon: ShieldAlert,
+    title: "This account is blocked.",
+    next: "An administrator has suspended access. Ask them to restore your account.",
+  },
+};
+
 function LoginPage() {
   const navigate = useNavigate();
+  const checkStatus = useServerFn(getAccountStatus);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<AccountState>("unknown");
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshStatus = async (value: string) => {
+    if (!value.includes("@")) {
+      setStatus("unknown");
+      return "unknown" as AccountState;
+    }
+    try {
+      const r = await checkStatus({ data: { email: value } });
+      setStatus(r.state);
+      return r.state;
+    } catch {
+      return "unknown" as AccountState;
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
+    setError(null);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      const state = await refreshStatus(email);
+      setLoading(false);
+      const message =
+        state === "unconfirmed"
+          ? "Your email is not confirmed yet — confirm it before signing in."
+          : state === "blocked"
+            ? "This account is blocked. Ask an administrator to restore access."
+            : signInError.message;
+      setError(message);
+      toast.error(message);
       return;
     }
+    setLoading(false);
     void navigate({ to: "/" });
   };
+
 
   const google = async () => {
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
