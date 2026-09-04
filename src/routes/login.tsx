@@ -108,10 +108,48 @@ function LoginPage() {
       footer={<>No account? <Link to="/register" className="font-medium text-primary hover:underline">Create one</Link></>}
     >
       <form onSubmit={submit} className="space-y-4">
+        {status !== "unknown" ? (
+          (() => {
+            const b = BANNERS[status];
+            const Icon = b.icon;
+            return (
+              <div role="status" className={`flex items-start gap-2 rounded-lg p-3 text-xs ${b.tone}`}>
+                <Icon className="mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium">{b.title}</p>
+                  <p className="opacity-90">{b.next}</p>
+                  {status === "unconfirmed" ? (
+                    <Link to="/verify-email" search={{ email }} className="font-medium underline">
+                      Resend verification email
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })()
+        ) : error ? (
+          <div role="status" className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
           <Label htmlFor="email">Work email</Label>
-          <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setStatus("unknown");
+              setError(null);
+            }}
+            onBlur={(e) => void refreshStatus(e.target.value)}
+            required
+          />
         </div>
+
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
