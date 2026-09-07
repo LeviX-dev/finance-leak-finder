@@ -17,7 +17,9 @@ export function NoImportedData({
       <h2 className="mt-4 text-base font-semibold">{title}</h2>
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
       <Button asChild className="mt-5">
-        <Link to="/integrations">Go to integrations</Link>
+        <Link to="/integrations" search={{ connect: undefined, message: undefined }}>
+          Go to integrations
+        </Link>
       </Button>
     </div>
   );
