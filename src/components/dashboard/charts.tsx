@@ -21,7 +21,6 @@ import {
 } from "recharts";
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
-import { anomalyByDay, leakBreakdown, riskRadar, savingsTrend } from "@/data/mock";
 
 const chartColors = [
   "var(--chart-1)",
@@ -50,6 +49,9 @@ const tooltipStyle = {
   },
   labelStyle: { color: "var(--muted-foreground)", fontSize: "11px" },
 };
+
+const compact = (v: number) =>
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
 
 export function ChartCard({
   title,
@@ -83,39 +85,57 @@ export function ChartCard({
   );
 }
 
-export function SavingsTrendChart() {
+function EmptyChart({ height = 260 }: { height?: number }) {
+  return (
+    <div
+      className="grid place-items-center rounded-xl border border-dashed border-border text-xs text-muted-foreground"
+      style={{ height }}
+    >
+      Nothing to chart yet — run a sync to import records.
+    </div>
+  );
+}
+
+export interface SpendPoint {
+  month: string;
+  spend: number;
+  detected: number;
+}
+
+export function SavingsTrendChart({ data }: { data: SpendPoint[] }) {
+  if (data.length === 0) return <EmptyChart />;
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={savingsTrend} margin={{ left: -18, right: 6, top: 4 }}>
+      <AreaChart data={data} margin={{ left: -18, right: 6, top: 4 }}>
         <defs>
           <linearGradient id="detectedFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
             <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
           </linearGradient>
-          <linearGradient id="recoveredFill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-5)" stopOpacity={0.3} />
             <stop offset="100%" stopColor="var(--chart-5)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="month" {...axisProps} />
-        <YAxis {...axisProps} tickFormatter={(v) => `$${v}k`} />
-        <Tooltip {...tooltipStyle} formatter={(v: number) => [`$${v}k`, ""]} />
+        <YAxis {...axisProps} tickFormatter={compact} />
+        <Tooltip {...tooltipStyle} formatter={(v: number) => [compact(v), ""]} />
+        <Area
+          type="monotone"
+          dataKey="spend"
+          stroke="var(--chart-5)"
+          strokeWidth={2}
+          fill="url(#spendFill)"
+          name="Invoiced"
+        />
         <Area
           type="monotone"
           dataKey="detected"
           stroke="var(--chart-1)"
           strokeWidth={2}
           fill="url(#detectedFill)"
-          name="Detected"
-        />
-        <Area
-          type="monotone"
-          dataKey="recovered"
-          stroke="var(--chart-5)"
-          strokeWidth={2}
-          fill="url(#recoveredFill)"
-          name="Recovered"
+          name="Detected exposure"
         />
         <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
       </AreaChart>
@@ -123,12 +143,13 @@ export function SavingsTrendChart() {
   );
 }
 
-export function LeakBreakdownChart() {
+export function LeakBreakdownChart({ data }: { data: Array<{ name: string; value: number }> }) {
+  if (data.length === 0) return <EmptyChart />;
   return (
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>
         <Pie
-          data={leakBreakdown}
+          data={data}
           dataKey="value"
           nameKey="name"
           innerRadius={62}
@@ -137,23 +158,21 @@ export function LeakBreakdownChart() {
           stroke="var(--card)"
           strokeWidth={2}
         >
-          {leakBreakdown.map((entry, i) => (
+          {data.map((entry, i) => (
             <Cell key={entry.name} fill={chartColors[i % chartColors.length]} />
           ))}
         </Pie>
-        <Tooltip
-          {...tooltipStyle}
-          formatter={(v: number, n) => [`$${(v / 1000).toFixed(0)}k`, n as string]}
-        />
+        <Tooltip {...tooltipStyle} formatter={(v: number, n) => [compact(v), n as string]} />
       </PieChart>
     </ResponsiveContainer>
   );
 }
 
-export function RiskRadarChart() {
+export function RiskRadarChart({ data }: { data: Array<{ area: string; score: number }> }) {
+  if (data.length === 0) return <EmptyChart />;
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <RadarChart data={riskRadar} outerRadius={95}>
+      <RadarChart data={data} outerRadius={95}>
         <PolarGrid stroke="var(--border)" />
         <PolarAngleAxis dataKey="area" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
         <Radar
@@ -161,7 +180,7 @@ export function RiskRadarChart() {
           stroke="var(--chart-3)"
           fill="var(--chart-3)"
           fillOpacity={0.28}
-          name="Risk score"
+          name="Exposure share"
         />
         <Tooltip {...tooltipStyle} />
       </RadarChart>
@@ -169,36 +188,37 @@ export function RiskRadarChart() {
   );
 }
 
-export function AnomalyBarChart() {
+export function AnomalyBarChart({ data }: { data: Array<{ label: string; count: number }> }) {
+  if (data.length === 0) return <EmptyChart height={240} />;
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={anomalyByDay} margin={{ left: -22, right: 6 }}>
+      <BarChart data={data} margin={{ left: -22, right: 6 }}>
         <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
-        <XAxis dataKey="day" {...axisProps} />
-        <YAxis {...axisProps} />
-        <Tooltip {...tooltipStyle} cursor={{ fill: "var(--muted)", opacity: 0.4 }} />
-        <Bar dataKey="anomalies" fill="var(--chart-1)" radius={[6, 6, 0, 0]} name="Anomalies" />
-        <Bar dataKey="baseline" fill="var(--chart-2)" radius={[6, 6, 0, 0]} name="Baseline" />
+        <XAxis dataKey="label" {...axisProps} />
+        <YAxis {...axisProps} allowDecimals={false} />
+        <Tooltip {...tooltipStyle} />
+        <Bar dataKey="count" fill="var(--chart-1)" radius={[6, 6, 0, 0]} name="Findings" />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-export function RecoveryLineChart() {
+export function RecoveryLineChart({ data }: { data: SpendPoint[] }) {
+  if (data.length === 0) return <EmptyChart height={240} />;
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <LineChart data={savingsTrend} margin={{ left: -18, right: 6 }}>
+      <LineChart data={data} margin={{ left: -18, right: 6 }}>
         <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="month" {...axisProps} />
-        <YAxis {...axisProps} tickFormatter={(v) => `$${v}k`} />
-        <Tooltip {...tooltipStyle} />
+        <YAxis {...axisProps} tickFormatter={compact} />
+        <Tooltip {...tooltipStyle} formatter={(v: number) => [compact(v), ""]} />
         <Line
           type="monotone"
-          dataKey="recovered"
+          dataKey="spend"
           stroke="var(--chart-5)"
           strokeWidth={2.5}
           dot={false}
-          name="Recovered"
+          name="Invoiced"
         />
         <Line
           type="monotone"
@@ -207,7 +227,7 @@ export function RecoveryLineChart() {
           strokeWidth={2}
           strokeDasharray="5 4"
           dot={false}
-          name="Detected"
+          name="Detected exposure"
         />
       </LineChart>
     </ResponsiveContainer>

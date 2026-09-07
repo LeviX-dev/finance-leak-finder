@@ -77,8 +77,31 @@ export interface SyncRunOption {
   startedAt: string;
 }
 
+export interface VendorSummary {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+  spend: number;
+  invoices: number;
+  outstanding: number;
+  leaks: number;
+}
+
+export interface GeneratedInsight {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  impact: number;
+  confidence: number;
+  count: number;
+}
+
 export interface OverviewPayload {
   connected: boolean;
+  currencyCode: string;
   totals: {
     invoices: number;
     payments: number;
@@ -88,11 +111,17 @@ export interface OverviewPayload {
     atRisk: number;
   };
   spendByMonth: Array<{ month: string; spend: number }>;
+  detectedByMonth: Array<{ month: string; detected: number; spend: number }>;
+  leakMix: Array<{ name: string; value: number }>;
+  severityMix: Array<{ severity: string; count: number; amount: number }>;
   topVendors: Array<{ vendor: string; spend: number }>;
+  vendorSummary: VendorSummary[];
+  insights: GeneratedInsight[];
   leaks: DetectedLeak[];
   vendorOptions: string[];
   syncRuns: SyncRunOption[];
 }
+
 
 
 function money(v: unknown): number {
@@ -280,8 +309,98 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
   leaks.sort((a, b) => b.amount - a.amount);
   const atRisk = leaks.reduce((s, l) => s + l.amount, 0);
 
+  // Most frequently used currency across the imported invoices.
+  const currencyCount = new Map<string, number>();
+  for (const i of invoices) {
+    const c = String(i["currency"] ?? "").trim();
+    if (c) currencyCount.set(c, (currencyCount.get(c) ?? 0) + 1);
+  }
+  const currencyCode = [...currencyCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+
+  // Detected exposure per month, aligned with the spend series.
+  const leaksByMonth = new Map<string, number>();
+  for (const l of leaks) {
+    const m = String(l.date ?? "").slice(0, 7);
+    if (!m) continue;
+    leaksByMonth.set(m, (leaksByMonth.get(m) ?? 0) + l.amount);
+  }
+  const detectedByMonth = spendByMonth.map(({ month, spend: s }) => ({
+    month,
+    spend: s,
+    detected: Math.round(leaksByMonth.get(month) ?? 0),
+  }));
+
+  const mix = new Map<string, number>();
+  const sev = new Map<string, { count: number; amount: number }>();
+  for (const l of leaks) {
+    mix.set(l.type, (mix.get(l.type) ?? 0) + l.amount);
+    const s = sev.get(l.severity) ?? { count: 0, amount: 0 };
+    sev.set(l.severity, { count: s.count + 1, amount: s.amount + l.amount });
+  }
+  const leakMix = [...mix.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value]) => ({ name, value: Math.round(value) }));
+  const severityMix = [...sev.entries()].map(([severity, s]) => ({
+    severity,
+    count: s.count,
+    amount: Math.round(s.amount),
+  }));
+
+  const leaksPerVendor = new Map<string, number>();
+  for (const l of leaks) leaksPerVendor.set(l.vendor.toLowerCase(), (leaksPerVendor.get(l.vendor.toLowerCase()) ?? 0) + 1);
+
+  const invStatsByVendor = new Map<string, { spend: number; count: number; outstanding: number }>();
+  for (const i of invoices) {
+    const key = String(i["vendor_name"] ?? "Unknown").toLowerCase();
+    const cur = invStatsByVendor.get(key) ?? { spend: 0, count: 0, outstanding: 0 };
+    invStatsByVendor.set(key, {
+      spend: cur.spend + money(i["amount"]),
+      count: cur.count + 1,
+      outstanding: cur.outstanding + Math.max(money(i["amount"]) - money(i["amount_paid"]), 0),
+    });
+  }
+
+  const vendorSummary: VendorSummary[] = vendors.map((v) => {
+    const key = String(v["name"] ?? "").toLowerCase();
+    const stats = invStatsByVendor.get(key) ?? { spend: 0, count: 0, outstanding: 0 };
+    return {
+      id: String(v["id"]),
+      name: String(v["name"] ?? "Unknown"),
+      email: (v["email"] as string | null) ?? null,
+      phone: (v["phone"] as string | null) ?? null,
+      status: (v["status"] as string | null) ?? null,
+      spend: Math.round(stats.spend),
+      invoices: stats.count,
+      outstanding: Math.round(stats.outstanding),
+      leaks: leaksPerVendor.get(key) ?? 0,
+    };
+  });
+  vendorSummary.sort((a, b) => b.spend - a.spend);
+
+  // Plain-language insights derived from the real findings.
+  const insights: GeneratedInsight[] = [...mix.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([type, amount]) => {
+      const group = leaks.filter((l) => l.type === type);
+      const vendorsHit = [...new Set(group.map((l) => l.vendor))];
+      const top = vendorsHit.slice(0, 3).join(", ");
+      const confidence =
+        type === "Duplicate invoice" || type === "Duplicate payment" ? 0.94 : type === "Overpayment" ? 0.88 : 0.76;
+      return {
+        id: `insight-${type.toLowerCase().replace(/\s+/g, "-")}`,
+        title: `${type} exposure across ${vendorsHit.length} ${vendorsHit.length === 1 ? "party" : "parties"}`,
+        category: type,
+        summary: `${group.length} ${type.toLowerCase()} ${group.length === 1 ? "finding" : "findings"} worth ${Math.round(amount).toLocaleString()} ${currencyCode}${top ? `, concentrated on ${top}` : ""}. Review the matched records before the next payment run.`,
+        impact: Math.round(amount),
+        confidence,
+        count: group.length,
+      };
+    });
+
   return {
     connected,
+    currencyCode,
     totals: {
       invoices: invoices.length,
       payments: payments.length,
@@ -291,9 +410,15 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
       atRisk: Math.round(atRisk),
     },
     spendByMonth,
+    detectedByMonth,
+    leakMix,
+    severityMix,
     topVendors,
+    vendorSummary,
+    insights,
     leaks: leaks.slice(0, 200),
     vendorOptions: [...new Set(leaks.map((l) => l.vendor))].sort(),
+
     syncRuns,
   };
 }
