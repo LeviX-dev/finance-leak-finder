@@ -77,8 +77,31 @@ export interface SyncRunOption {
   startedAt: string;
 }
 
+export interface VendorSummary {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+  spend: number;
+  invoices: number;
+  outstanding: number;
+  leaks: number;
+}
+
+export interface GeneratedInsight {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  impact: number;
+  confidence: number;
+  count: number;
+}
+
 export interface OverviewPayload {
   connected: boolean;
+  currencyCode: string;
   totals: {
     invoices: number;
     payments: number;
@@ -88,11 +111,17 @@ export interface OverviewPayload {
     atRisk: number;
   };
   spendByMonth: Array<{ month: string; spend: number }>;
+  detectedByMonth: Array<{ month: string; detected: number; spend: number }>;
+  leakMix: Array<{ name: string; value: number }>;
+  severityMix: Array<{ severity: string; count: number; amount: number }>;
   topVendors: Array<{ vendor: string; spend: number }>;
+  vendorSummary: VendorSummary[];
+  insights: GeneratedInsight[];
   leaks: DetectedLeak[];
   vendorOptions: string[];
   syncRuns: SyncRunOption[];
 }
+
 
 
 function money(v: unknown): number {
