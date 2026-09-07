@@ -1,0 +1,23 @@
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getErpFinancials, getErpOverview } from "@/lib/erp.functions";
+
+/** Real imported invoices, payments and vendors for the signed-in user. */
+export function useErpFinancials() {
+  const fetchFinancials = useServerFn(getErpFinancials);
+  return useQuery({
+    queryKey: ["erp", "financials"],
+    queryFn: () => fetchFinancials(),
+    staleTime: 30_000,
+  });
+}
+
+/** Aggregates, findings and insights computed from the imported records. */
+export function useErpOverview() {
+  const fetchOverview = useServerFn(getErpOverview);
+  return useQuery({
+    queryKey: ["erp", "overview"],
+    queryFn: () => fetchOverview(),
+    staleTime: 30_000,
+  });
+}
