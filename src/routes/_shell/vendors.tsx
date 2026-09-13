@@ -82,7 +82,7 @@ function VendorsPage() {
         description={`${rows.length.toLocaleString()} contacts imported from your connected systems, ranked by billed value.`}
         crumbs={[{ label: "Vendors" }]}
         actions={
-          <Button variant="outline" className="gap-2" disabled={rows.length === 0} onClick={() => downloadCsv("vendors.csv", rows)}>
+          <Button variant="outline" className="gap-2" disabled={rows.length === 0} onClick={() => downloadCsv("vendors.csv", rows.map((r) => ({ ...r })))}>
             <Download className="size-4" /> Export
           </Button>
         }
