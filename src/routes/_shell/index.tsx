@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 import {
   ArrowRight,
   BadgeDollarSign,
-  Bell,
   Brain,
   Download,
   Gauge,
@@ -13,10 +12,10 @@ import {
   TrendingDown,
   Wallet,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/common/stat-card";
 import { SeverityBadge, ToneBadge } from "@/components/common/tone-badge";
+import { NoImportedData } from "@/components/common/no-data";
 import {
   AnomalyBarChart,
   ChartCard,
@@ -26,8 +25,9 @@ import {
 } from "@/components/dashboard/charts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { activityFeed, aiInsights, alerts, financialLeaks, kpis } from "@/data/mock";
-import { compactCurrency, currency, number, percent } from "@/lib/format";
+import { useErpOverview } from "@/hooks/use-erp";
+import { downloadCsv } from "@/lib/csv";
+import { compactCurrencyIn, currencyIn, dateShort, number, percent } from "@/lib/format";
 
 export const Route = createFileRoute("/_shell/")({
   head: () => ({
@@ -36,12 +36,12 @@ export const Route = createFileRoute("/_shell/")({
       {
         name: "description",
         content:
-          "Monitor financial health, potential savings, recovered spend and AI-detected leakage across your ERP data in one enterprise dashboard.",
+          "Monitor billed value, outstanding balance, money at risk and detected leakage across the records imported from your accounting systems.",
       },
       { property: "og:title", content: "AutoAudit Dashboard" },
       {
         property: "og:description",
-        content: "AI-powered financial leakage detection for enterprise finance teams.",
+        content: "AI-powered financial leakage detection built on your own imported financial records.",
       },
     ],
   }),
@@ -49,26 +49,60 @@ export const Route = createFileRoute("/_shell/")({
 });
 
 function DashboardPage() {
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, isFetching, refetch } = useErpOverview();
+  const code = data?.currencyCode;
+  const totals = data?.totals;
+  const leaks = data?.leaks ?? [];
+  const insights = data?.insights ?? [];
+  const severity = (data?.severityMix ?? []).map((s) => ({ label: s.severity, count: s.count }));
+  const topSpend = (data?.topVendors ?? []).reduce((s, v) => s + v.spend, 0) || 1;
+  const radar = (data?.topVendors ?? []).slice(0, 6).map((v) => ({
+    area: v.vendor.length > 14 ? `${v.vendor.slice(0, 13)}…` : v.vendor,
+    score: Math.round((v.spend / topSpend) * 100),
+  }));
+  const riskShare = totals && totals.spend > 0 ? totals.atRisk / totals.spend : 0;
+  const healthScore = Math.max(0, Math.min(100, Math.round(100 - riskShare * 100)));
+  const runs = data?.syncRuns ?? [];
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+  if (!isLoading && !data?.connected) {
+    return (
+      <>
+        <PageHeader
+          title="Financial control center"
+          description="Connect your accounting system to see your own numbers here."
+          crumbs={[{ label: "Dashboard" }]}
+        />
+        <NoImportedData />
+      </>
+    );
+  }
 
   return (
     <>
       <PageHeader
         title="Financial control center"
-        description="Live view of leakage detection, recovery performance and AI risk signals across 14 entities."
+        description="Live view of the invoices, payments and vendors imported from your connected systems."
         crumbs={[{ label: "Dashboard" }]}
         actions={
           <>
-            <Button variant="outline" className="gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={leaks.length === 0}
+              onClick={() => downloadCsv("findings.csv", leaks.map((l) => ({
+                type: l.type,
+                title: l.title,
+                vendor: l.vendor,
+                amount: l.amount,
+                currency: l.currency,
+                severity: l.severity,
+                date: l.date,
+              })))}
+            >
               <Download className="size-4" /> Export
             </Button>
-            <Button className="gap-2">
-              <RefreshCw className="size-4" /> Run AI scan
+            <Button className="gap-2" disabled={isFetching} onClick={() => void refetch()}>
+              <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Re-run analysis
             </Button>
           </>
         }
@@ -77,57 +111,53 @@ function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           index={0}
-          loading={loading}
+          loading={isLoading}
           label="Financial health score"
-          value={`${kpis.financialHealthScore}/100`}
-          delta={6}
+          value={`${healthScore}/100`}
           icon={Gauge}
           tone="brand"
-          hint="Up 6 points since last quarter"
+          hint={`${percent(riskShare)} of billed value is flagged`}
         />
         <StatCard
           index={1}
-          loading={loading}
-          label="Potential savings identified"
-          value={compactCurrency(kpis.potentialSavings)}
-          delta={18}
+          loading={isLoading}
+          label="Money at risk"
+          value={compactCurrencyIn(totals?.atRisk ?? 0, code)}
           icon={BadgeDollarSign}
           tone="violet"
-          hint={`${number(kpis.leaksDetected)} leaks across 6 categories`}
+          hint={`${number(leaks.length)} findings across ${data?.leakMix.length ?? 0} categories`}
         />
         <StatCard
           index={2}
-          loading={loading}
-          label="Money recovered YTD"
-          value={compactCurrency(kpis.moneyRecovered)}
-          delta={11}
+          loading={isLoading}
+          label="Total billed value"
+          value={compactCurrencyIn(totals?.spend ?? 0, code)}
           icon={Wallet}
           tone="success"
-          hint={`${kpis.recoveryRate}% recovery rate`}
+          hint={`${number(totals?.invoices ?? 0)} invoices and bills imported`}
         />
         <StatCard
           index={3}
-          loading={loading}
-          label="AI risk score"
-          value={`${kpis.aiRiskScore} · Moderate`}
-          delta={-4}
+          loading={isLoading}
+          label="Outstanding balance"
+          value={compactCurrencyIn(totals?.outstanding ?? 0, code)}
           icon={ShieldAlert}
           tone="warning"
-          hint={`${kpis.fraudAlerts} fraud indicators open`}
+          hint={`${number(totals?.payments ?? 0)} payments recorded`}
         />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <ChartCard
           className="lg:col-span-2"
-          title="Detected vs. recovered leakage"
-          description="Rolling 8 months, in thousands USD"
-          action={<ToneBadge tone="success">+18% MoM</ToneBadge>}
+          title="Invoiced vs. detected exposure"
+          description="Last 12 months of imported activity"
+          action={<ToneBadge tone="brand">{compactCurrencyIn(totals?.spend ?? 0, code)} invoiced</ToneBadge>}
         >
-          <SavingsTrendChart />
+          <SavingsTrendChart data={data?.detectedByMonth ?? []} />
         </ChartCard>
         <ChartCard title="Leakage by category" description="Share of total exposure">
-          <LeakBreakdownChart />
+          <LeakBreakdownChart data={data?.leakMix ?? []} />
         </ChartCard>
       </section>
 
@@ -142,9 +172,7 @@ function DashboardPage() {
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="size-4 text-violet" /> AI recommendations
               </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Ranked by recoverable impact and model confidence
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Ranked by recoverable impact</p>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-1">
               <Link to="/ai-insights">
@@ -153,7 +181,7 @@ function DashboardPage() {
             </Button>
           </div>
           <ul className="mt-4 space-y-3">
-            {aiInsights.map((insight, i) => (
+            {insights.slice(0, 3).map((insight, i) => (
               <motion.li
                 key={insight.id}
                 initial={{ opacity: 0, x: -8 }}
@@ -166,63 +194,46 @@ function DashboardPage() {
                   <ToneBadge tone="violet">{percent(insight.confidence)} confidence</ToneBadge>
                 </div>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{insight.summary}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <ToneBadge tone="success">{currency(insight.impact)} impact</ToneBadge>
-                  {insight.actions.map((a) => (
-                    <Button key={a} size="sm" variant="outline" className="h-7 text-xs">
-                      {a}
-                    </Button>
-                  ))}
+                <div className="mt-3">
+                  <ToneBadge tone="success">{currencyIn(insight.impact, code)} impact</ToneBadge>
                 </div>
               </motion.li>
             ))}
+            {!isLoading && insights.length === 0 && (
+              <li className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+                No issues found in the imported records.
+              </li>
+            )}
           </ul>
         </motion.div>
 
-        <ChartCard title="Anomaly volume" description="This week vs. baseline">
-          <AnomalyBarChart />
+        <ChartCard title="Findings by severity" description="Open findings from the latest analysis">
+          <AnomalyBarChart data={severity} />
         </ChartCard>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="surface-card p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <Bell className="size-4 text-destructive" /> Active alerts
-          </h3>
-          <ul className="mt-4 space-y-3">
-            {alerts.slice(0, 4).map((a) => (
-              <li key={a.id} className="rounded-xl border border-border p-3">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                  <p className="text-sm font-medium">{a.title}</p>
-                  <SeverityBadge severity={a.severity} />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">{a.time}</p>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-
-        <ChartCard title="Risk surface" description="AI-scored exposure by domain">
-          <RiskRadarChart />
+        <ChartCard title="Spend concentration" description="Share of billed value by top party">
+          <RiskRadarChart data={radar} />
         </ChartCard>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="surface-card p-5">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="surface-card p-5 lg:col-span-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <Brain className="size-4 text-primary" /> Recent activity
+            <Brain className="size-4 text-primary" /> Recent imports
           </h3>
           <ol className="mt-4 space-y-4">
-            {activityFeed.map((item) => (
-              <li key={item.id} className="relative pl-5 text-sm">
+            {runs.slice(0, 6).map((run) => (
+              <li key={run.id} className="relative pl-5 text-sm">
                 <span className="absolute top-1.5 left-0 size-2 rounded-full bg-primary/60" />
                 <p>
-                  <span className="font-medium">{item.actor}</span>{" "}
-                  <span className="text-muted-foreground">{item.action}</span>{" "}
-                  <span className="font-medium">{item.target}</span>
+                  <span className="font-medium capitalize">{run.provider.replace(/_/g, " ")}</span>{" "}
+                  <span className="text-muted-foreground">import</span>{" "}
+                  <span className="font-medium">{run.status}</span>
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{item.time}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{dateShort(run.startedAt)}</p>
               </li>
             ))}
+            {runs.length === 0 && <li className="text-sm text-muted-foreground">No imports have run yet.</li>}
           </ol>
         </motion.div>
       </section>
@@ -233,9 +244,7 @@ function DashboardPage() {
             <h3 className="flex items-center gap-2 text-sm font-semibold">
               <TrendingDown className="size-4 text-destructive" /> Leak detection summary
             </h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Top exposures awaiting triage this cycle
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Largest exposures awaiting review</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="gap-1">
             <Link to="/leaks">
@@ -244,7 +253,7 @@ function DashboardPage() {
           </Button>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {financialLeaks.slice(0, 6).map((leak) => (
+          {leaks.slice(0, 6).map((leak) => (
             <motion.article
               key={leak.id}
               whileHover={{ y: -3 }}
@@ -252,22 +261,19 @@ function DashboardPage() {
             >
               <div className="flex items-center justify-between gap-2">
                 <ToneBadge tone="brand" size="sm">
-                  {leak.category}
+                  {leak.type}
                 </ToneBadge>
                 <SeverityBadge severity={leak.severity} />
               </div>
               <p className="mt-2.5 line-clamp-2 text-sm font-medium">{leak.title}</p>
               <p className="mt-1 text-xs text-muted-foreground">{leak.vendor}</p>
-              <p className="mt-3 text-lg font-semibold tabular-nums">{currency(leak.amount)}</p>
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>AI confidence</span>
-                  <span>{percent(leak.confidence)}</span>
-                </div>
-                <Progress value={leak.confidence * 100} className="mt-1.5 h-1.5" />
-              </div>
+              <p className="mt-3 text-lg font-semibold tabular-nums">{currencyIn(leak.amount, leak.currency || code)}</p>
+              <Progress value={Math.min(100, (leak.amount / (leaks[0]?.amount || 1)) * 100)} className="mt-3 h-1.5" />
             </motion.article>
           ))}
+          {!isLoading && leaks.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nothing flagged in the imported records.</p>
+          )}
         </div>
       </section>
     </>
